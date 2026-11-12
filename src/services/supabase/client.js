@@ -38,6 +38,7 @@ export function translateError(error) {
     ['user already registered', 'Ya existe una cuenta con ese correo.'],
     ['token has expired or is invalid', 'El código no es válido o ha caducado. Pide uno nuevo.'],
     ['otp_expired', 'El código o el enlace han caducado. Pide uno nuevo.'],
+    ['link is invalid or has expired', 'El enlace no es válido o ha caducado.'],
     ['should be different from the old password', 'La nueva contraseña debe ser distinta de la anterior.'],
     ['password should be at least', 'La contraseña es demasiado corta.'],
     ['weak password', 'La contraseña es demasiado débil. Usa al menos 8 caracteres mezclando letras y números.'],

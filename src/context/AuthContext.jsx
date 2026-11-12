@@ -7,7 +7,8 @@ const CURRENT_ACCEPTANCE = { termsVersion: TERMS_VERSION, privacyVersion: PRIVAC
 
 /** Quita de la URL los tokens que dejan los enlaces de los correos (#access_token=...). */
 function cleanAuthHash() {
-  if (/access_token=|error_description=|type=recovery/.test(window.location.hash)) {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#/confirmar') && /access_token=|error_description=/.test(hash)) {
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/`);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }
@@ -160,6 +161,15 @@ export function AuthProvider({ children }) {
     codeFlow.current = false;
     setRecoveryMode(false);
   }, []);
+  /** Enlace del correo que lleva a #/confirmar: verifica el token y deja la sesión cargada antes de seguir. */
+  const verifyEmailLink = useCallback(
+    async (tokenHash, type) => {
+      await authService.verifyEmailLink(tokenHash, type);
+      if (type === 'recovery') setRecoveryMode(true);
+      await applyUser(await authService.getCurrentUser());
+    },
+    [applyUser]
+  );
   const endRecovery = useCallback(() => setRecoveryMode(false), []);
   const clearLinkError = useCallback(() => setLinkError(null), []);
 
@@ -182,12 +192,13 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       verifyRecoveryCode,
       updatePassword,
+      verifyEmailLink,
       recoveryMode,
       endRecovery,
       linkError,
       clearLinkError,
     }),
-    [user, loading, login, register, logout, updateProfile, acceptCurrentTerms, deleteAccount, needsTermsAcceptance, requestPasswordReset, verifyRecoveryCode, updatePassword, recoveryMode, endRecovery, linkError, clearLinkError]
+    [user, loading, login, register, logout, updateProfile, acceptCurrentTerms, deleteAccount, needsTermsAcceptance, requestPasswordReset, verifyRecoveryCode, updatePassword, verifyEmailLink, recoveryMode, endRecovery, linkError, clearLinkError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

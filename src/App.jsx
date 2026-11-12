@@ -10,6 +10,7 @@ import LegalPage from './components/legal/LegalPage';
 import TermsUpdateScreen from './components/legal/TermsUpdateScreen';
 import { CookieBanner, CookieSettings } from './components/legal/CookieBanner';
 import { LinkErrorModal, RecoveryModal } from './components/auth/RecoveryModal';
+import ConfirmLinkScreen from './components/auth/ConfirmLinkScreen';
 
 const SPLASH_MIN_MS = 900;
 
@@ -42,6 +43,11 @@ function Screen() {
         <LegalPage page={route.page} />
       </motion.div>
     );
+  }
+
+  // Enlaces de los correos (confirmar cuenta / cambiar contraseña): se procesan antes que nada.
+  if (route.name === 'confirm') {
+    return <ConfirmLinkScreen tokenHash={route.tokenHash} type={route.type} />;
   }
 
   if (loading || !splashDone) return <FullScreenLoader label="Preparando tu espacio" />;

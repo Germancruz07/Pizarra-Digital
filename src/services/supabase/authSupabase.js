@@ -192,6 +192,18 @@ export const supabaseAuthAdapter = {
     if (error) throw translateError(error);
   },
 
+  /**
+   * Verifica el enlace de los correos que apunta directamente a este sitio
+   * (#/confirmar?token_hash=…&type=…). Al confirmar el registro inicia la sesión; con
+   * type=recovery abre una sesión de recuperación para elegir una contraseña nueva.
+   */
+  async verifyEmailLink(tokenHash, type) {
+    const allowed = ['email', 'signup', 'recovery', 'email_change', 'invite', 'magiclink'];
+    if (!tokenHash || !allowed.includes(type)) throw new Error('El enlace no es válido.');
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (error) throw translateError(error);
+  },
+
   async updatePassword(password) {
     validateNewPassword(password);
     const { error } = await supabase.auth.updateUser({ password });
