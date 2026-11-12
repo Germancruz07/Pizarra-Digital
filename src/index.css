@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  --app-bg: #f5f6fb;
+  --surface: #ffffff;
+  --surface-rgb: 255 255 255;
+  --glass-bg: rgba(255, 255, 255, 0.86);
+  --glass-border: rgba(15, 23, 42, 0.08);
+}
+
+/* ------------------------------------------------------------------ *
+ * Modo oscuro por tokens: se reasignan las variables de color que usa
+ * Tailwind (escala slate y tintes claros) y las superficies blancas.
+ * Así todos los componentes cambian de forma coherente.
+ * ------------------------------------------------------------------ */
+html.dark {
+  color-scheme: dark;
+  --app-bg: #0e0f15;
+  --surface: #1a1c27;
+  --surface-rgb: 26 28 39;
+  --glass-bg: rgba(26, 28, 39, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --color-slate-50: #151722;
+  --color-slate-100: #1f2231;
+  --color-slate-200: #2b2f42;
+  --color-slate-300: #3b4058;
+  --color-slate-400: #6d7393;
+  --color-slate-500: #8c92b0;
+  --color-slate-600: #abb0c9;
+  --color-slate-700: #c7cbde;
+  --color-slate-800: #dfe2ee;
+  --color-slate-900: #eef0f7;
+  --color-slate-950: #f7f8fc;
+
+  --color-indigo-50: #23264b;
+  --color-indigo-100: #2d3163;
+  --color-indigo-200: #3b4083;
+  --color-indigo-700: #c7d2fe;
+  --color-violet-50: #2a2449;
+  --color-emerald-50: #0f2c25;
+  --color-amber-50: #322710;
+  --color-rose-50: #3a1820;
+  --color-rose-100: #4b1d28;
+}
+
+/* Superficies "blancas" → superficie oscura (sin tocar text-white). */
+html.dark .bg-white,
+html.dark [class~="hover:bg-white"]:hover,
+html.dark [class~="focus:bg-white"]:focus {
+  background-color: var(--surface);
+}
+html.dark [class~="bg-white/90"] { background-color: rgb(var(--surface-rgb) / 0.9); }
+html.dark [class~="bg-white/80"] { background-color: rgb(var(--surface-rgb) / 0.8); }
+html.dark [class~="bg-white/75"] { background-color: rgb(var(--surface-rgb) / 0.75); }
+html.dark [class~="bg-white/50"] { background-color: rgb(var(--surface-rgb) / 0.5); }
+html.dark [class~="ring-white"],
+html.dark [class~="ring-offset-2"] {
+  --tw-ring-offset-color: var(--surface);
+}
+html.dark [class~="ring-white"] { --tw-ring-color: var(--surface); }
+
+/* Transición suave de colores al cambiar de tema. */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease !important;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--color-slate-900);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      0 12px 32px -14px rgba(15, 23, 42, 0.28),
+      0 2px 6px rgba(15, 23, 42, 0.05);
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 0.85rem;
+    border: 1px solid var(--color-slate-200);
+    background: var(--color-slate-50);
+    color: var(--color-slate-900);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    outline: none;
+  }
+  .field::placeholder {
+    color: var(--color-slate-400);
+  }
+  .field:focus {
+    background: var(--surface);
+    border-color: #818cf8;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 10px 24px -10px rgba(99, 102, 241, 0.7);
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 14px 30px -10px rgba(99, 102, 241, 0.8);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--color-slate-700);
+    background: var(--color-slate-100);
+    transition: background 0.2s, transform 0.15s;
+  }
+  .btn-ghost:hover {
+    background: var(--color-slate-200);
+  }
+  .btn-ghost:active {
+    transform: scale(0.97);
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    background: linear-gradient(135deg, #ef4444, #e11d48);
+    box-shadow: 0 10px 24px -10px rgba(225, 29, 72, 0.7);
+    transition: transform 0.15s, filter 0.2s;
+  }
+  .btn-danger:hover {
+    filter: brightness(1.06);
+  }
+  .btn-danger:active {
+    transform: scale(0.97);
+  }
+
+  .range {
+    width: 100%;
+    accent-color: #6366f1;
+    cursor: pointer;
+  }
+
+  .scroll-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+}
+.animate-shake {
+  animation: shake 0.45s ease-in-out;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-slate-100);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+html.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.08); }
+  66% { transform: translate(-25px, 20px) scale(0.95); }
+}
+.animate-blob {
+  animation: blob 14s ease-in-out infinite;
+}

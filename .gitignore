@@ -1,0 +1,10 @@
+node_modules
+dist
+*.local
+.DS_Store
+.claude/
+
+# Variables de entorno: nunca se suben al repositorio
+.env
+.env.*
+!.env.example
