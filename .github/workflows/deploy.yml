@@ -29,13 +29,15 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      # Si estas variables del repositorio existen, la app usa cuentas en la nube (Supabase);
-      # si no, funciona en modo local. Se configuran en Settings → Secrets and variables → Actions → Variables.
+      # Si estos secretos del repositorio existen, la app usa cuentas en la nube (Supabase);
+      # si no, funciona en modo local. Se configuran en Settings → Secrets and variables → Actions.
+      # Nota: la clave publicable acaba en el JavaScript del navegador por diseño; la protección
+      # real de los datos son las reglas RLS de supabase/schema.sql.
       - name: Compilar
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_REGION: ${{ vars.VITE_SUPABASE_REGION }}
           VITE_EMAIL_SENDER: ${{ vars.VITE_EMAIL_SENDER }}
 
