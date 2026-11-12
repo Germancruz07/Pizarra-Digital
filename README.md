@@ -98,9 +98,34 @@ Crea adaptadores con los mismos métodos (descritos en ese archivo) y reasígnal
   texto alternativo en imágenes (editable en el panel), descripción del lienzo para lectores de pantalla y uso por teclado
   (Tab enfoca el lienzo, **N** recorre elementos, **Intro** inserta la figura/texto de la herramienta activa).
 
+## Modo nube: ver tus pizarras en el PC y en el celular (Supabase)
+
+Sin configuración la app funciona en **modo local** (todo en el navegador). Con Supabase pasa a **modo nube**:
+cuentas con correo, pizarras e imágenes sincronizadas entre dispositivos y cambio de contraseña por correo
+(código de 6 dígitos o enlace).
+
+1. Crea una cuenta gratuita en [supabase.com](https://supabase.com) → **New project** (elige la región más cercana).
+2. **SQL Editor** → pega el contenido de [`supabase/schema.sql`](supabase/schema.sql) → **Run**. Crea las tablas,
+   las reglas de seguridad (cada usuario solo ve lo suyo), el almacenamiento de imágenes y la función para borrar la cuenta.
+3. **Authentication → URL Configuration**:
+   - *Site URL*: `https://germancruz07.github.io/Pizarra-Digital/`
+   - *Redirect URLs*: añade esa misma dirección y `http://localhost:5173/`
+4. **Authentication → Emails → Reset password**: pega [`supabase/email-reset-password.html`](supabase/email-reset-password.html)
+   (incluye el código `{{ .Token }}` y el enlace).
+5. **Correo**: el servicio de correo integrado de Supabase es solo para pruebas (envía a pocas direcciones y con un límite muy bajo).
+   Para usuarios reales configura un SMTP en **Authentication → Emails → SMTP Settings** (por ejemplo Resend o Brevo, que tienen plan gratuito).
+6. **Project Settings → API Keys**: copia la *Project URL* y la **clave publicable** (`sb_publishable_…` o la antigua `anon`).
+   Nunca uses la clave secreta en la app.
+7. En GitHub: **Settings → Secrets and variables → Actions → Variables** crea `VITE_SUPABASE_URL` y
+   `VITE_SUPABASE_PUBLISHABLE_KEY` (opcional: `VITE_SUPABASE_REGION` y `VITE_EMAIL_SENDER` para los textos legales).
+   El siguiente despliegue ya usará la nube. Para desarrollar en tu PC, pon los mismos valores en `.env` (ver `.env.example`).
+
+Para pasar a la nube las pizarras que ya tenías en el navegador: en la versión local usa **Perfil → Descargar**,
+y después, ya con tu cuenta en la nube, **Perfil → Importar**.
+
 ## Claves de API
 
-La app **no usa ninguna clave de API**: todo se guarda en el navegador. Si conectas Firebase o Supabase:
+En modo local la app **no usa ninguna clave de API**. En modo nube solo usa la clave **publicable** de Supabase. Si conectas otro servicio:
 
 1. Copia `.env.example` como `.env` y rellena los valores (`.env` está en `.gitignore`, no se sube a git).
 2. Léelas en el adaptador con `import.meta.env.VITE_SUPABASE_URL`, etc.

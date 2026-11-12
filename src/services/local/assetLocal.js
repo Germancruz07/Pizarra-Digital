@@ -2,8 +2,8 @@ import { idbGet, idbPut, idbGetAllByIndex, idbGetAllKeysByIndex, idbDeleteMany }
 import { uid } from '../../utils/id';
 
 export const localAssetAdapter = {
-  async saveImage(ownerId, blob, meta = {}) {
-    const id = uid('img_');
+  /** Guarda una imagen. `id` solo se pasa al restaurar una copia de seguridad (para conservar referencias). */
+  async saveImage(ownerId, blob, meta = {}, id = uid('img_')) {
     await idbPut('images', { id, ownerId, blob, type: blob.type, ...meta, createdAt: Date.now() });
     return id;
   },

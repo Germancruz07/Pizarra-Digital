@@ -14,12 +14,16 @@ const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
 const LICENSE_FILE = /^(licen[cs]e|copying|ofl)(\.(md|txt))?$/i;
 
 const entries = [];
+const seen = new Set();
 for (const [path, info] of Object.entries(lock.packages || {})) {
   if (!path || info.dev || info.optional) continue;
   const dir = join(root, path);
   const pkgFile = join(dir, 'package.json');
   if (!existsSync(pkgFile)) continue;
   const pkg = JSON.parse(readFileSync(pkgFile, 'utf8'));
+  const key = `${pkg.name}@${pkg.version}`;
+  if (seen.has(key)) continue;
+  seen.add(key);
   const licenseFile = readdirSync(dir).find((f) => LICENSE_FILE.test(f));
   const license = typeof pkg.license === 'string' ? pkg.license : pkg.license?.type || info.license || 'Desconocida';
   entries.push({

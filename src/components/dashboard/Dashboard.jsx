@@ -19,7 +19,7 @@ const SORTS = [
 ];
 
 export default function Dashboard({ onOpenBoard }) {
-  const { user } = useAuth();
+  const { user, isCloud } = useAuth();
   const toast = useToast();
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +47,9 @@ export default function Dashboard({ onOpenBoard }) {
 
   useEffect(() => {
     refresh();
+    const onChanged = () => refresh();
+    window.addEventListener('pd:boards-changed', onChanged);
+    return () => window.removeEventListener('pd:boards-changed', onChanged);
   }, [refresh]);
 
   const visible = useMemo(() => {
@@ -147,7 +150,7 @@ export default function Dashboard({ onOpenBoard }) {
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Hola, {firstName} 👋</h1>
             <p className="mt-1.5 text-slate-600" aria-live="polite">
-              {loading ? 'Cargando tus pizarras…' : `Tienes ${pluralize(boards.length, 'pizarra guardada', 'pizarras guardadas')} en este navegador.`}
+              {loading ? 'Cargando tus pizarras…' : `Tienes ${pluralize(boards.length, 'pizarra guardada', 'pizarras guardadas')} ${isCloud ? 'en tu cuenta' : 'en este navegador'}.`}
             </p>
           </div>
           <button className="btn-primary self-start sm:self-auto" onClick={() => setCreating(true)}>
@@ -244,7 +247,7 @@ export default function Dashboard({ onOpenBoard }) {
       <ConfirmDialog
         open={!!deleting}
         title="¿Eliminar pizarra?"
-        message={`“${deleting?.name || ''}” se eliminará de este navegador junto con sus imágenes. Esta acción no se puede deshacer.`}
+        message={`“${deleting?.name || ''}” se eliminará ${isCloud ? 'de tu cuenta en todos tus dispositivos' : 'de este navegador'} junto con sus imágenes. Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         danger
         onConfirm={handleDelete}

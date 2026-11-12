@@ -9,6 +9,7 @@ import BoardEditor from './components/board/BoardEditor';
 import LegalPage from './components/legal/LegalPage';
 import TermsUpdateScreen from './components/legal/TermsUpdateScreen';
 import { CookieBanner, CookieSettings } from './components/legal/CookieBanner';
+import { LinkErrorModal, RecoveryModal } from './components/auth/RecoveryModal';
 
 const SPLASH_MIN_MS = 900;
 
@@ -75,6 +76,8 @@ export default function App() {
         Saltar al contenido
       </a>
       <Screen />
+      <RecoveryModal />
+      <LinkErrorModal />
       <CookieBanner />
       <CookieSettings />
     </>

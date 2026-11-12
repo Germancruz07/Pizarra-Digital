@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { CONTACT_EMAIL, LAST_UPDATED, REPO_URL, SITE_OWNER, SITE_URL } from '../../legal/config';
+import { REPO_URL, SITE_OWNER, SITE_URL } from '../../legal/config';
 import { useConsent } from '../../context/ConsentContext';
+import { isCloud } from '../../services/supabase/client';
+import { PrivacyCloud, TermsCloud } from './LegalCloud';
+import { Mail, Updated } from './legalParts';
 
-const Mail = () => (
-  <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-);
+/** Los textos describen exactamente el modo publicado: local (navegador) o nube (Supabase). */
+export function Privacy() {
+  return isCloud ? <PrivacyCloud /> : <PrivacyLocal />;
+}
 
-function Updated() {
-  return <p className="legal-meta">Última actualización: {LAST_UPDATED}</p>;
+export function Terms() {
+  return isCloud ? <TermsCloud /> : <TermsLocal />;
 }
 
 /* ------------------------------------------------------------------ */
 
-export function Privacy() {
+function PrivacyLocal() {
   return (
     <>
       <h1>Política de privacidad</h1>
@@ -209,7 +213,7 @@ export function Privacy() {
 
 /* ------------------------------------------------------------------ */
 
-export function Terms() {
+function TermsLocal() {
   return (
     <>
       <h1>Términos y condiciones</h1>
@@ -299,13 +303,20 @@ export function Terms() {
 
 /* ------------------------------------------------------------------ */
 
-const STORAGE_ROWS = [
-  ['pd:session', 'localStorage', 'Esencial', 'Mantener tu sesión iniciada.', 'Hasta que cierres sesión o elimines la cuenta.'],
-  ['pd:users', 'localStorage', 'Esencial', 'Cuentas creadas en este navegador (usuario, contraseña cifrada, perfil y registro de aceptación de términos).', 'Hasta que elimines la cuenta.'],
-  ['pizarra-digital (boards, images)', 'IndexedDB', 'Esencial', 'Tus pizarras e imágenes.', 'Hasta que las borres o elimines la cuenta.'],
-  ['pd:consent', 'localStorage', 'Esencial', 'Recordar tu decisión sobre este aviso.', 'Hasta que la cambies o cambie esta política.'],
-  ['pd:theme', 'localStorage', 'Preferencias (opcional)', 'Recordar tu tema claro, oscuro o del sistema.', 'Hasta que retires el consentimiento.'],
-];
+const STORAGE_ROWS = isCloud
+  ? [
+      ['pd:supabase-auth', 'localStorage', 'Esencial', 'Mantener tu sesión iniciada en tu cuenta en la nube.', 'Hasta que cierres sesión (la sesión se renueva automáticamente mientras la usas).'],
+      ['pd:pendingAvatar', 'localStorage', 'Esencial', 'Guardar la foto de avatar elegida al registrarte hasta que confirmes tu correo.', 'Se borra al iniciar sesión por primera vez.'],
+      ['pd:consent', 'localStorage', 'Esencial', 'Recordar tu decisión sobre este aviso.', 'Hasta que la cambies o cambie esta política.'],
+      ['pd:theme', 'localStorage', 'Preferencias (opcional)', 'Recordar tu tema claro, oscuro o del sistema.', 'Hasta que retires el consentimiento.'],
+    ]
+  : [
+      ['pd:session', 'localStorage', 'Esencial', 'Mantener tu sesión iniciada.', 'Hasta que cierres sesión o elimines la cuenta.'],
+      ['pd:users', 'localStorage', 'Esencial', 'Cuentas creadas en este navegador (usuario, contraseña cifrada, perfil y registro de aceptación de términos).', 'Hasta que elimines la cuenta.'],
+      ['pizarra-digital (boards, images)', 'IndexedDB', 'Esencial', 'Tus pizarras e imágenes.', 'Hasta que las borres o elimines la cuenta.'],
+      ['pd:consent', 'localStorage', 'Esencial', 'Recordar tu decisión sobre este aviso.', 'Hasta que la cambies o cambie esta política.'],
+      ['pd:theme', 'localStorage', 'Preferencias (opcional)', 'Recordar tu tema claro, oscuro o del sistema.', 'Hasta que retires el consentimiento.'],
+    ];
 
 export function Cookies() {
   const { openSettings, consent } = useConsent();
@@ -344,8 +355,10 @@ export function Cookies() {
       </table>
       <p>
         El almacenamiento esencial no requiere consentimiento porque sin él la app no puede funcionar. El de
-        preferencias solo se activa si lo aceptas, y está desactivado por defecto. Ningún dato de esta tabla sale de
-        tu navegador.
+        preferencias solo se activa si lo aceptas, y está desactivado por defecto.{' '}
+        {isCloud
+          ? 'El token de sesión se envía únicamente a nuestro proveedor de base de datos (Supabase) para identificarte; el resto no sale de tu navegador.'
+          : 'Ningún dato de esta tabla sale de tu navegador.'}
       </p>
       <p>
         Estado actual en este dispositivo:{' '}
@@ -399,7 +412,7 @@ export function Licenses() {
           </thead>
           <tbody>
             {packages.map((p) => (
-              <tr key={p.name}>
+              <tr key={`${p.name}@${p.version}`}>
                 <td>{p.name}</td>
                 <td>{p.version}</td>
                 <td>{p.license}</td>

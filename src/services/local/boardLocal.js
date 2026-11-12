@@ -1,9 +1,7 @@
 import { idbGet, idbPut, idbDelete, idbGetAllByIndex, idbGetAllKeysByIndex, idbDeleteMany } from '../storage/indexedDb';
 import { uid } from '../../utils/id';
 import { localAssetAdapter } from './assetLocal';
-import { buildWelcomeElements, WELCOME_IMAGE_SVG, WELCOME_IMAGE_SIZE } from '../../data/welcomeBoard';
-import { createThumbnail } from '../../canvas/renderer';
-import { loadImageFromBlob } from '../../utils/image';
+import { seedWelcome } from '../shared/welcome';
 
 const DEFAULT_NAME = 'Pizarra sin título';
 
@@ -31,7 +29,7 @@ async function getBoard(ownerId, id) {
   return getOwned(ownerId, id);
 }
 
-async function createBoard(ownerId, { name, background = 'white', elements = [], viewport } = {}) {
+async function createBoard(ownerId, { name, background = 'white', elements = [], viewport, thumbnail = null } = {}) {
   const now = Date.now();
   const board = {
     id: uid('brd_'),
@@ -40,7 +38,7 @@ async function createBoard(ownerId, { name, background = 'white', elements = [],
     background,
     elements,
     viewport: viewport || { x: 0, y: 0, zoom: 1 },
-    thumbnail: null,
+    thumbnail,
     elementCount: countElements(elements),
     createdAt: now,
     updatedAt: now,
@@ -86,25 +84,7 @@ async function deleteBoard(ownerId, id) {
 }
 
 async function seedWelcomeBoard(ownerId) {
-  const blob = new Blob([WELCOME_IMAGE_SVG], { type: 'image/svg+xml' });
-  const imageId = await localAssetAdapter.saveImage(ownerId, blob, WELCOME_IMAGE_SIZE);
-  const elements = buildWelcomeElements(imageId);
-  const summary = await createBoard(ownerId, {
-    name: '👋 Pizarra de bienvenida',
-    background: 'grid',
-    elements,
-    // Desplazada a la derecha para que el panel de propiedades no tape el contenido.
-    viewport: { x: 280, y: 90, zoom: 0.8 },
-  });
-  try {
-    const img = await loadImageFromBlob(blob);
-    const thumbnail = createThumbnail(elements, 'grid', () => img);
-    if (thumbnail) await idbPut('boards', { ...(await idbGet('boards', summary.id)), thumbnail });
-    URL.revokeObjectURL(img.src);
-  } catch {
-    /* La miniatura se generará en el primer guardado. */
-  }
-  return summary;
+  return seedWelcome(ownerId, { assets: localAssetAdapter, boards: { createBoard, saveBoard } });
 }
 
 /** Todas las pizarras completas del usuario (para la descarga de datos). */

@@ -7,8 +7,8 @@
  * (todos los métodos devuelven Promesas) y reasignarlos aquí:
  *
  *   AuthService
- *     register({ username, displayName?, password, avatar?, acceptance }) -> User
- *     login({ username, password })               -> User
+ *     register({ username|email, displayName?, password, avatar?, acceptance }) -> { user } | { needsConfirmation }
+ *     login({ username|email, password })         -> User
  *     logout()                                    -> void
  *     getCurrentUser()                            -> User | null
  *     updateProfile(userId, { name?, avatar? })   -> User
@@ -29,7 +29,7 @@
  *     deleteAllForOwner(ownerId)                  -> void   (pizarras + imágenes)
  *
  *   AssetService (binarios pesados: imágenes)
- *     saveImage(ownerId, blob, meta)              -> imageId
+ *     saveImage(ownerId, blob, meta, id?)         -> imageId
  *     getImageBlob(imageId)                       -> Blob | null
  *     listImages(ownerId)                         -> ImageRecord[]
  *     deleteAllForOwner(ownerId)                  -> void
@@ -38,7 +38,19 @@
 import { localAuthAdapter } from './local/authLocal';
 import { localBoardAdapter } from './local/boardLocal';
 import { localAssetAdapter } from './local/assetLocal';
+import { isCloud } from './supabase/client';
+import { supabaseAuthAdapter } from './supabase/authSupabase';
+import { supabaseBoardAdapter } from './supabase/boardSupabase';
+import { supabaseAssetAdapter } from './supabase/assetSupabase';
 
-export const authService = localAuthAdapter;
-export const boardService = localBoardAdapter;
-export const assetService = localAssetAdapter;
+/**
+ * Modo nube (Supabase) si existen VITE_SUPABASE_URL y la clave publicable; si no, modo local.
+ * En modo nube, además de lo anterior, AuthService ofrece:
+ *     onAuthChange(cb), loadUser(authUser), markWelcomeSeeded(userId),
+ *     requestPasswordReset(email), verifyRecoveryCode(email, code), updatePassword(password)
+ * y register() devuelve { user } o { needsConfirmation, email } si hay que confirmar el correo.
+ */
+export { isCloud };
+export const authService = isCloud ? supabaseAuthAdapter : localAuthAdapter;
+export const boardService = isCloud ? supabaseBoardAdapter : localBoardAdapter;
+export const assetService = isCloud ? supabaseAssetAdapter : localAssetAdapter;

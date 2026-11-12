@@ -29,8 +29,15 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # Si estas variables del repositorio existen, la app usa cuentas en la nube (Supabase);
+      # si no, funciona en modo local. Se configuran en Settings → Secrets and variables → Actions → Variables.
       - name: Compilar
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_REGION: ${{ vars.VITE_SUPABASE_REGION }}
+          VITE_EMAIL_SENDER: ${{ vars.VITE_EMAIL_SENDER }}
 
       - uses: actions/configure-pages@v5
 

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, AtSign, ChevronDown, Eye, EyeOff, Loader2, Lock, PenLine, Shapes, ShieldCheck, Type, User } from 'lucide-react';
+import { ArrowRight, AtSign, ChevronDown, Eye, EyeOff, Loader2, Lock, Mail, MailCheck, PenLine, Shapes, ShieldCheck, Type, User } from 'lucide-react';
+import PasswordResetFlow from './PasswordResetFlow';
+import { MIN_PASSWORD } from '../../services/supabase/authSupabase';
+import { isCloud as CLOUD } from '../../services/supabase/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import AvatarPicker from './AvatarPicker';
@@ -30,7 +33,10 @@ function Field({ icon: Icon, id, label, hint, children }) {
 const FEATURES = [
   { icon: PenLine, text: 'Lápiz suave, formas, flechas y texto editable' },
   { icon: Shapes, text: 'Cada trazo es un objeto: muévelo y redimensiónalo' },
-  { icon: ShieldCheck, text: 'Sin rastreo: tus pizarras se guardan solo en tu navegador' },
+  {
+    icon: ShieldCheck,
+    text: CLOUD ? 'Sin rastreo: tus pizarras en todos tus dispositivos' : 'Sin rastreo: tus pizarras se guardan solo en tu navegador',
+  },
 ];
 
 function Hero() {
@@ -101,7 +107,7 @@ function Hero() {
 }
 
 export default function AuthScreen() {
-  const { login, register } = useAuth();
+  const { login, register, isCloud } = useAuth();
   const toast = useToast();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
@@ -113,7 +119,11 @@ export default function AuthScreen() {
   const [shake, setShake] = useState(0);
   const [busy, setBusy] = useState(false);
 
+  const [view, setView] = useState('form'); // 'form' | 'forgot' | 'confirm'
+  const [confirmEmail, setConfirmEmail] = useState('');
+
   const isRegister = mode === 'register';
+  const minPassword = isCloud ? MIN_PASSWORD : 6;
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const switchMode = (m) => {
@@ -126,11 +136,17 @@ export default function AuthScreen() {
     setBusy(true);
     setError('');
     try {
+      const identity = isCloud ? { email: form.username } : { username: form.username };
       if (isRegister) {
-        const u = await register({ ...form, avatar, acceptedTerms });
-        toast(`¡Bienvenido, ${u.name}! Te preparamos una pizarra de ejemplo.`);
+        const result = await register({ ...identity, displayName: form.displayName, password: form.password, avatar, acceptedTerms });
+        if (result.needsConfirmation) {
+          setConfirmEmail(result.email);
+          setView('confirm');
+        } else {
+          toast(`¡Bienvenido, ${result.user.name}! Te preparamos una pizarra de ejemplo.`);
+        }
       } else {
-        const u = await login({ username: form.username, password: form.password });
+        const u = await login({ ...identity, password: form.password });
         toast(`¡Hola de nuevo, ${u.name}!`);
       }
     } catch (err) {
@@ -164,9 +180,34 @@ export default function AuthScreen() {
               {isRegister ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
             </h2>
             <p className="mt-1.5 text-slate-600">
-              {isRegister ? 'Solo necesitas un usuario y una contraseña.' : 'Inicia sesión para ver tus pizarras.'}
+              {isRegister
+                ? `Solo necesitas ${isCloud ? 'un correo' : 'un usuario'} y una contraseña.`
+                : 'Inicia sesión para ver tus pizarras.'}
             </p>
 
+            {view === 'confirm' && (
+              <div className="mt-7 space-y-4 rounded-2xl border border-slate-200 p-5" role="status">
+                <MailCheck size={32} className="text-indigo-700" aria-hidden="true" />
+                <h3 className="text-lg font-semibold text-slate-900">Revisa tu correo</h3>
+                <p className="text-sm leading-relaxed text-slate-700">
+                  Te enviamos un enlace a <strong>{confirmEmail}</strong> para confirmar tu cuenta. Ábrelo y entrarás
+                  directamente. Si no lo ves en unos minutos, revisa la carpeta de spam.
+                </p>
+                <button type="button" className="btn-ghost w-full" onClick={() => { setView('form'); switchMode('login'); }}>
+                  Volver a iniciar sesión
+                </button>
+              </div>
+            )}
+
+            {view === 'forgot' && (
+              <div className="mt-7 rounded-2xl border border-slate-200 p-5">
+                <h3 className="mb-3 text-lg font-semibold text-slate-900">Recuperar contraseña</h3>
+                <PasswordResetFlow onCancel={() => setView('form')} onDone={() => setView('form')} />
+              </div>
+            )}
+
+            {view === 'form' && (
+            <>
             <div role="tablist" aria-label="Acceso" className="relative mt-7 flex rounded-2xl bg-slate-200/60 p-1 text-sm font-semibold">
               {[
                 ['login', 'Iniciar sesión'],
@@ -189,26 +230,48 @@ export default function AuthScreen() {
             </div>
 
             <form key={shake} onSubmit={submit} noValidate className={`mt-6 space-y-4 ${shake ? 'animate-shake' : ''}`}>
-              <Field
-                icon={AtSign}
-                id="username"
-                label="Usuario"
-                hint={isRegister ? '3 a 30 caracteres: letras sin acentos, números, punto, guion o guion bajo.' : 'Si creaste tu cuenta con un correo, escríbelo aquí.'}
-              >
-                <input
+              {isCloud ? (
+                <Field
+                  icon={Mail}
                   id="username"
-                  className="field pl-10"
-                  value={form.username}
-                  onChange={set('username')}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  aria-describedby="username-hint"
-                  required
-                />
-              </Field>
+                  label="Correo electrónico"
+                  hint={isRegister ? 'Lo usarás para entrar y para recuperar tu contraseña. No enviamos publicidad.' : null}
+                >
+                  <input
+                    id="username"
+                    type="email"
+                    className="field pl-10"
+                    value={form.username}
+                    onChange={set('username')}
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    aria-describedby={isRegister ? 'username-hint' : undefined}
+                    required
+                  />
+                </Field>
+              ) : (
+                <Field
+                  icon={AtSign}
+                  id="username"
+                  label="Usuario"
+                  hint={isRegister ? '3 a 30 caracteres: letras sin acentos, números, punto, guion o guion bajo.' : 'Si creaste tu cuenta con un correo, escríbelo aquí.'}
+                >
+                  <input
+                    id="username"
+                    className="field pl-10"
+                    value={form.username}
+                    onChange={set('username')}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    aria-describedby="username-hint"
+                    required
+                  />
+                </Field>
+              )}
 
-              <Field icon={Lock} id="password" label="Contraseña" hint={isRegister ? 'Mínimo 6 caracteres.' : null}>
+              <Field icon={Lock} id="password" label="Contraseña" hint={isRegister ? `Mínimo ${minPassword} caracteres.` : null}>
                 <input
                   id="password"
                   className="field pl-10 pr-11"
@@ -230,6 +293,19 @@ export default function AuthScreen() {
                 </button>
               </Field>
 
+              {isCloud && !isRegister && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setView('forgot');
+                  }}
+                  className="-mt-1 text-sm font-semibold text-indigo-700 underline-offset-2 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
+
               <AnimatePresence initial={false}>
                 {isRegister && (
                   <motion.div
@@ -240,7 +316,7 @@ export default function AuthScreen() {
                     transition={{ duration: 0.25 }}
                     className="space-y-4 overflow-hidden"
                   >
-                    <Field icon={User} id="displayName" label="Nombre visible (opcional)" hint="Si lo dejas vacío, se mostrará tu usuario.">
+                    <Field icon={User} id="displayName" label="Nombre visible (opcional)" hint={`Si lo dejas vacío, se mostrará ${isCloud ? 'la primera parte de tu correo' : 'tu usuario'}.`}>
                       <input
                         id="displayName"
                         className="field pl-10"
@@ -324,9 +400,12 @@ export default function AuthScreen() {
                 {isRegister ? 'Inicia sesión' : 'Crea una gratis'}
               </button>
             </p>
+            </>
+            )}
             <p className="mt-4 text-center text-xs leading-relaxed text-slate-600">
-              Tus datos se guardan solo en este navegador: no se envían a ningún servidor. Puedes descargarlos o
-              borrarlos cuando quieras desde tu perfil.
+              {isCloud
+                ? 'Tus pizarras se guardan en tu cuenta en la nube para que las veas en todos tus dispositivos. Solo tú puedes acceder a ellas, y puedes descargarlas o borrarlas cuando quieras desde tu perfil.'
+                : 'Tus datos se guardan solo en este navegador: no se envían a ningún servidor. Puedes descargarlos o borrarlos cuando quieras desde tu perfil.'}
             </p>
           </motion.div>
         </main>

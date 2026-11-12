@@ -105,8 +105,11 @@ export const localAuthAdapter = {
     };
     writeJSON(USERS_KEY, [...users, user]);
     writeJSON(SESSION_KEY, { userId: user.id, at: Date.now() });
-    return publicUser(user);
+    return { user: { ...publicUser(user), needsWelcome: true } };
   },
+
+  /** En local la pizarra de bienvenida se crea justo al registrarse; no hay nada que marcar. */
+  async markWelcomeSeeded() {},
 
   async login({ username, password }) {
     const id = normalizeUsername(username);
