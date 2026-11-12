@@ -44,7 +44,11 @@ export function translateError(error) {
     ['unable to validate email address', 'Introduce un correo electrónico válido.'],
     ['email address', 'Introduce un correo electrónico válido.'],
     ['for security purposes', 'Por seguridad, espera unos segundos antes de volver a intentarlo.'],
-    ['rate limit', 'Se alcanzó el límite de envíos de correo. Inténtalo más tarde.'],
+    [
+      'email rate limit',
+      'El servidor ha alcanzado su límite de correos por hora, así que ahora no puede enviar el correo de confirmación o de contraseña. Inténtalo de nuevo dentro de una hora.',
+    ],
+    ['rate limit', 'Demasiados intentos seguidos. Espera unos minutos y vuelve a intentarlo.'],
     ['failed to fetch', 'No hay conexión con el servidor. Revisa tu conexión a internet.'],
     ['jwt expired', 'Tu sesión caducó. Vuelve a iniciar sesión.'],
   ];

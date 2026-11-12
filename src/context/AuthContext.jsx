@@ -35,8 +35,8 @@ export function AuthProvider({ children }) {
         u.id,
         (async () => {
           try {
-            await boardService.seedWelcomeBoard(u.id);
-            await authService.markWelcomeSeeded(u.id);
+            // Primero se reserva en la base de datos; solo quien gana la reserva crea la pizarra.
+            if (await authService.claimWelcomeSeed(u.id)) await boardService.seedWelcomeBoard(u.id);
           } catch {
             /* La cuenta es válida aunque falle la pizarra de ejemplo. */
           }

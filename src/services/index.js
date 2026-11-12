@@ -46,7 +46,7 @@ import { supabaseAssetAdapter } from './supabase/assetSupabase';
 /**
  * Modo nube (Supabase) si existen VITE_SUPABASE_URL y la clave publicable; si no, modo local.
  * En modo nube, además de lo anterior, AuthService ofrece:
- *     onAuthChange(cb), loadUser(authUser), markWelcomeSeeded(userId),
+ *     onAuthChange(cb), loadUser(authUser), claimWelcomeSeed(userId) -> boolean,
  *     requestPasswordReset(email), verifyRecoveryCode(email, code), updatePassword(password)
  * y register() devuelve { user } o { needsConfirmation, email } si hay que confirmar el correo.
  */

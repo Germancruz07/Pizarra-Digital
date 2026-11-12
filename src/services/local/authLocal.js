@@ -108,8 +108,10 @@ export const localAuthAdapter = {
     return { user: { ...publicUser(user), needsWelcome: true } };
   },
 
-  /** En local la pizarra de bienvenida se crea justo al registrarse; no hay nada que marcar. */
-  async markWelcomeSeeded() {},
+  /** En local solo hay una pestaña implicada y la cuenta se acaba de crear: siempre toca crearla. */
+  async claimWelcomeSeed() {
+    return true;
+  },
 
   async login({ username, password }) {
     const id = normalizeUsername(username);

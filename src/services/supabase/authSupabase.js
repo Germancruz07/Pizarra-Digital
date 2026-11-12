@@ -138,9 +138,20 @@ export const supabaseAuthAdapter = {
     return loadUser(data.user);
   },
 
-  async markWelcomeSeeded(userId) {
-    const { error } = await supabase.from('profiles').update({ welcome_seeded: true }).eq('id', userId);
+  /**
+   * Reserva la creación de la pizarra de bienvenida de forma atómica en la base de datos:
+   * solo la primera llamada (de cualquier pestaña o dispositivo) cambia false → true y recibe `true`.
+   * Así nunca se crean dos pizarras de bienvenida aunque varias pestañas inicien sesión a la vez.
+   */
+  async claimWelcomeSeed(userId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ welcome_seeded: true })
+      .eq('id', userId)
+      .eq('welcome_seeded', false)
+      .select('id');
     if (error) throw translateError(error);
+    return data.length > 0;
   },
 
   async exportProfile(userId) {
