@@ -49,7 +49,7 @@ export function ToastProvider({ children }) {
                 <span className="flex-1">{t.message}</span>
                 <button
                   onClick={() => dismiss(t.id)}
-                  className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-md p-0.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-600"
                   aria-label="Cerrar notificación"
                 >
                   <X size={14} />

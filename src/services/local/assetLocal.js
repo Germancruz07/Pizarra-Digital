@@ -1,4 +1,4 @@
-import { idbGet, idbPut, idbGetAllKeysByIndex, idbDeleteMany } from '../storage/indexedDb';
+import { idbGet, idbPut, idbGetAllByIndex, idbGetAllKeysByIndex, idbDeleteMany } from '../storage/indexedDb';
 import { uid } from '../../utils/id';
 
 export const localAssetAdapter = {
@@ -11,6 +11,17 @@ export const localAssetAdapter = {
   async getImageBlob(id) {
     const record = await idbGet('images', id);
     return record?.blob || null;
+  },
+
+  /** Todas las imágenes del usuario (para la descarga de datos). */
+  async listImages(ownerId) {
+    return idbGetAllByIndex('images', 'ownerId', ownerId);
+  },
+
+  /** Borra todas las imágenes del usuario (al eliminar la cuenta). */
+  async deleteAllForOwner(ownerId) {
+    const keys = await idbGetAllKeysByIndex('images', 'ownerId', ownerId);
+    if (keys.length) await idbDeleteMany('images', keys);
   },
 
   /** Borra las imágenes del usuario que ya no usa ninguna de sus pizarras. */

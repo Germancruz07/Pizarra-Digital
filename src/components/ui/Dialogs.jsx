@@ -49,7 +49,7 @@ export function PromptDialog({ open, title, label, initialValue = '', confirmLab
     <Modal open={open} onClose={onClose} title={title} icon={PenLine}>
       <form onSubmit={submit} className="space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600">{label}</span>
           <input autoFocus className="field" value={value} maxLength={80} onChange={(e) => setValue(e.target.value)} />
         </label>
         <div className="flex justify-end gap-2">

@@ -2,11 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 
 function parse() {
   const hash = window.location.hash.replace(/^#/, '') || '/';
-  const m = hash.match(/^\/board\/([\w-]+)/);
-  return m ? { name: 'board', id: m[1] } : { name: 'dashboard' };
+  const board = hash.match(/^\/board\/([\w-]+)/);
+  if (board) return { name: 'board', id: board[1] };
+  const legal = hash.match(/^\/legal\/([a-z]+)/);
+  if (legal) return { name: 'legal', page: legal[1] };
+  return { name: 'dashboard' };
 }
 
-/** Enrutado mínimo por hash: "#/" (dashboard) y "#/board/:id" (editor). */
+/** Enrutado mínimo por hash: "#/" (dashboard), "#/board/:id" (editor) y "#/legal/:pagina". */
 export function useHashRoute() {
   const [route, setRoute] = useState(parse);
 

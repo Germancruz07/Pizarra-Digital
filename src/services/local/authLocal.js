@@ -4,7 +4,7 @@ import { randomAvatar } from '../../data/avatars';
 
 const USERS_KEY = 'pd:users';
 const SESSION_KEY = 'pd:session';
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const USERNAME_RE = /^[a-z0-9._-]{3,30}$/;
 
 function toHex(buffer) {
   return Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -43,6 +43,7 @@ function randomSalt() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+/** Datos que la app puede ver del usuario (nunca el hash ni la sal). */
 function publicUser(user) {
   const { passwordHash, salt, ...rest } = user;
   return rest;
@@ -52,30 +53,53 @@ function readUsers() {
   return readJSON(USERS_KEY, []);
 }
 
-function validateName(name) {
+function normalizeUsername(value) {
+  return (value || '').trim().toLowerCase();
+}
+
+function validateUsername(value) {
+  const u = normalizeUsername(value);
+  if (!USERNAME_RE.test(u)) {
+    throw new Error('El usuario debe tener entre 3 y 30 caracteres: letras sin acentos, números, punto, guion o guion bajo.');
+  }
+  return u;
+}
+
+function validateDisplayName(name, fallback) {
   const n = (name || '').trim();
-  if (n.length < 2) throw new Error('El nombre debe tener al menos 2 caracteres.');
-  if (n.length > 40) throw new Error('El nombre no puede superar los 40 caracteres.');
+  if (!n) return fallback;
+  if (n.length > 40) throw new Error('El nombre visible no puede superar los 40 caracteres.');
   return n;
 }
 
+/** Registro de aceptación de términos: quién (id de cuenta), qué versiones, cuándo y en qué contexto. */
+function acceptanceRecord({ termsVersion, privacyVersion }, context) {
+  return { type: 'terms', termsVersion, privacyVersion, acceptedAt: new Date().toISOString(), context };
+}
+
 export const localAuthAdapter = {
-  async register({ name, email, password, avatar }) {
-    const cleanName = validateName(name);
-    const cleanEmail = (email || '').trim().toLowerCase();
-    if (!EMAIL_RE.test(cleanEmail)) throw new Error('Introduce un correo electrónico válido.');
+  async register({ username, displayName, password, avatar, acceptance }) {
+    const cleanUsername = validateUsername(username);
     if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    if (!acceptance?.termsVersion || !acceptance?.privacyVersion) {
+      throw new Error('Debes aceptar los Términos y condiciones y la Política de privacidad para crear la cuenta.');
+    }
 
     const users = readUsers();
-    if (users.some((u) => u.email === cleanEmail)) throw new Error('Ya existe una cuenta con ese correo.');
+    if (users.some((u) => u.username === cleanUsername || u.email === cleanUsername)) {
+      throw new Error('Ese nombre de usuario ya existe en este navegador. Prueba con otro.');
+    }
 
+    const record = acceptanceRecord(acceptance, 'registro');
     const salt = randomSalt();
     const user = {
       id: uid('usr_'),
-      name: cleanName,
-      email: cleanEmail,
+      username: cleanUsername,
+      name: validateDisplayName(displayName, cleanUsername),
       avatar: avatar || randomAvatar(),
       createdAt: Date.now(),
+      termsAcceptance: record,
+      consentLog: [record],
       salt,
       passwordHash: await hashPassword(password, salt),
     };
@@ -84,12 +108,13 @@ export const localAuthAdapter = {
     return publicUser(user);
   },
 
-  async login({ email, password }) {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    if (!cleanEmail || !password) throw new Error('Introduce tu correo y contraseña.');
-    const user = readUsers().find((u) => u.email === cleanEmail);
+  async login({ username, password }) {
+    const id = normalizeUsername(username);
+    if (!id || !password) throw new Error('Introduce tu usuario y tu contraseña.');
+    // Las cuentas creadas antes de este cambio iniciaban sesión con correo: se siguen aceptando.
+    const user = readUsers().find((u) => u.username === id || u.email === id);
     if (!user || (await hashPassword(password, user.salt)) !== user.passwordHash) {
-      throw new Error('Correo o contraseña incorrectos.');
+      throw new Error('Usuario o contraseña incorrectos.');
     }
     writeJSON(SESSION_KEY, { userId: user.id, at: Date.now() });
     return publicUser(user);
@@ -111,10 +136,37 @@ export const localAuthAdapter = {
     const idx = users.findIndex((u) => u.id === userId);
     if (idx === -1) throw new Error('No se encontró el usuario.');
     const next = { ...users[idx] };
-    if (patch.name !== undefined) next.name = validateName(patch.name);
+    if (patch.name !== undefined) next.name = validateDisplayName(patch.name, next.username || next.name);
     if (patch.avatar !== undefined) next.avatar = patch.avatar;
     users[idx] = next;
     writeJSON(USERS_KEY, users);
     return publicUser(next);
+  },
+
+  /** Acepta una nueva versión de los términos (cuentas creadas antes de esa versión). */
+  async acceptTerms(userId, acceptance) {
+    const users = readUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) throw new Error('No se encontró el usuario.');
+    const record = acceptanceRecord(acceptance, 'actualización de términos');
+    users[idx] = { ...users[idx], termsAcceptance: record, consentLog: [...(users[idx].consentLog || []), record] };
+    writeJSON(USERS_KEY, users);
+    return publicUser(users[idx]);
+  },
+
+  /** Perfil completo para la descarga de datos (sin hash ni sal de la contraseña). */
+  async exportProfile(userId) {
+    const user = readUsers().find((u) => u.id === userId);
+    if (!user) throw new Error('No se encontró el usuario.');
+    return publicUser(user);
+  },
+
+  /** Borra la cuenta de este navegador y cierra la sesión. */
+  async deleteAccount(userId) {
+    writeJSON(
+      USERS_KEY,
+      readUsers().filter((u) => u.id !== userId)
+    );
+    removeKey(SESSION_KEY);
   },
 };

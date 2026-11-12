@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { describeElement } from '../../canvas/describe';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ImagePlus } from 'lucide-react';
 import { drawBackground, drawElement } from '../../canvas/renderer';
@@ -69,6 +70,7 @@ export default function WhiteboardCanvas({
   const touchesRef = useRef(new Map());
 
   const [dragOver, setDragOver] = useState(false);
+  const visibleElements = useMemo(() => elements.filter((el) => el.type !== 'erase'), [elements]);
 
   // Props más recientes accesibles desde handlers y el render.
   const props = useRef({});
@@ -772,10 +774,16 @@ export default function WhiteboardCanvas({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <canvas ref={bgRef} className="absolute inset-0 pointer-events-none" />
+      <canvas ref={bgRef} aria-hidden="true" className="absolute inset-0 pointer-events-none" />
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 touch-none"
+        id="lienzo"
+        tabIndex={0}
+        role="application"
+        aria-roledescription="lienzo de dibujo"
+        aria-label={`Pizarra con ${visibleElements.length} ${visibleElements.length === 1 ? 'elemento' : 'elementos'}`}
+        aria-describedby="lienzo-ayuda lienzo-contenido"
+        className="absolute inset-0 touch-none focus-visible:outline-offset-[-4px]"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -784,6 +792,21 @@ export default function WhiteboardCanvas({
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => e.preventDefault()}
       />
+      <div className="sr-only">
+        <p id="lienzo-ayuda">
+          Usa las teclas de herramientas (V selección, P lápiz, R rectángulo, O elipse, T texto…). Con el lienzo
+          enfocado: N y Mayúsculas+N recorren los elementos, Intro inserta la figura o el texto de la herramienta activa
+          o edita el texto seleccionado, las flechas mueven la selección y Suprimir la elimina.
+        </p>
+        <ul id="lienzo-contenido" aria-label="Contenido de la pizarra">
+          {visibleElements.slice(0, 200).map((el, i) => (
+            <li key={el.id}>
+              {i + 1}. {describeElement(el)}
+              {selectedIds.includes(el.id) ? ' (seleccionado)' : ''}
+            </li>
+          ))}
+        </ul>
+      </div>
       {children}
       <AnimatePresence>
         {dragOver && (
@@ -802,7 +825,7 @@ export default function WhiteboardCanvas({
                 <ImagePlus size={28} />
               </div>
               <p className="font-semibold text-slate-800">Suelta tus imágenes aquí</p>
-              <p className="text-xs text-slate-500">PNG, JPG o WEBP</p>
+              <p className="text-xs text-slate-600">PNG, JPG o WEBP</p>
             </motion.div>
           </motion.div>
         )}

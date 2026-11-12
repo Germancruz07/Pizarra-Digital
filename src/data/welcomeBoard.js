@@ -30,7 +30,7 @@ export function buildWelcomeElements(imageId) {
     createElement('text', { ...ink, fontSize: 44, fontWeight: 'bold', textAlign: 'left' }, {
       x: 80, y: 50, text: '¡Bienvenido a tu pizarra! 👋',
     }),
-    createElement('text', { strokeColor: '#64748b', opacity: 1, fontSize: 20, fontWeight: 'normal', textAlign: 'left' }, {
+    createElement('text', { strokeColor: '#475569', opacity: 1, fontSize: 20, fontWeight: 'normal', textAlign: 'left' }, {
       x: 82, y: 116,
       text: 'Todo es editable: selecciona, mueve, redimensiona o cambia colores desde el panel lateral.',
     }),
@@ -67,14 +67,25 @@ export function buildWelcomeElements(imageId) {
       x: 250, y: 535, text: 'Dibujo a mano alzada ✍️',
     }),
 
-    createElement('image', { opacity: 1 }, { imageId, x: 720, y: 400, width: 286, height: 187 }),
+    createElement('image', { opacity: 1 }, {
+      imageId,
+      x: 720,
+      y: 400,
+      width: 286,
+      height: 187,
+      alt: 'Ilustración de ejemplo: tarjeta con degradado morado y rosa, un sol amarillo y montañas, con el texto «Imagen de ejemplo».',
+    }),
 
     createElement('line', { strokeColor: '#cbd5e1', strokeWidth: 2, opacity: 1, arrowStart: false, arrowEnd: false }, {
       points: [[80, 630], [1006, 630]],
     }),
-    createElement('text', { strokeColor: '#64748b', opacity: 1, fontSize: 17, fontWeight: 'normal', textAlign: 'left' }, {
+    createElement('text', { strokeColor: '#475569', opacity: 1, fontSize: 17, fontWeight: 'normal', textAlign: 'left' }, {
       x: 80, y: 648,
       text: 'Doble clic en un texto para editarlo  ·  Rueda del ratón para desplazarte  ·  Ctrl + rueda para zoom  ·  Espacio + arrastrar para moverte',
+    }),
+    createElement('text', { strokeColor: '#4338ca', opacity: 1, fontSize: 15, fontWeight: 'bold', textAlign: 'left' }, {
+      x: 80, y: 685,
+      text: '✦ Contenido de ejemplo generado con inteligencia artificial (Claude, de Anthropic). Puedes borrarlo.',
     }),
   ];
 }

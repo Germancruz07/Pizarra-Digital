@@ -40,7 +40,7 @@ export default function TextEditorOverlay({ element, viewport, onChange, onFinis
           onFinish();
         }
       }}
-      className="absolute z-20 m-0 resize-none overflow-hidden whitespace-pre border-0 bg-transparent p-0 outline-none placeholder:text-slate-400/70"
+      className="absolute z-20 m-0 resize-none overflow-hidden whitespace-pre border-0 bg-transparent p-0 outline-none placeholder:text-slate-600"
       style={{
         left: element.x * z + viewport.x,
         top: element.y * z + viewport.y,

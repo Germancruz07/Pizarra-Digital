@@ -45,7 +45,7 @@ export default function ColorPicker({ value, onChange, mergeKey }) {
       >
         <span className="h-4 w-4 rounded-md ring-1 ring-slate-900/10" style={{ background: value }} />
         Personalizado
-        <span className="ml-auto font-mono text-[11px] uppercase text-slate-500">{value}</span>
+        <span className="ml-auto font-mono text-[11px] uppercase text-slate-600">{value}</span>
         <Pipette size={13} />
       </button>
 
@@ -68,7 +68,7 @@ export default function ColorPicker({ value, onChange, mergeKey }) {
                   aria-label="Selector de color"
                 />
                 <label className="flex flex-1 items-center rounded-lg border border-slate-200 bg-white px-2">
-                  <span className="text-xs font-semibold text-slate-400">HEX</span>
+                  <span className="text-xs font-semibold text-slate-600">HEX</span>
                   <input
                     value={hex}
                     onChange={(e) => {
@@ -86,7 +86,7 @@ export default function ColorPicker({ value, onChange, mergeKey }) {
               <div className="grid grid-cols-3 gap-1.5">
                 {['r', 'g', 'b'].map((ch) => (
                   <label key={ch} className="flex items-center rounded-lg border border-slate-200 bg-white px-2">
-                    <span className="text-xs font-semibold uppercase text-slate-400">{ch}</span>
+                    <span className="text-xs font-semibold uppercase text-slate-600">{ch}</span>
                     <input
                       type="number"
                       min={0}

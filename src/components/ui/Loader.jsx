@@ -39,7 +39,7 @@ export function DrawingLoader({ size = 160 }) {
 /** Texto con puntos suspensivos animados. */
 export function LoadingText({ children, className = '' }) {
   return (
-    <p className={`flex items-baseline gap-0.5 text-sm font-medium text-slate-500 ${className}`}>
+    <p className={`flex items-baseline gap-0.5 text-sm font-medium text-slate-600 ${className}`}>
       {children}
       {[0, 1, 2].map((i) => (
         <motion.span

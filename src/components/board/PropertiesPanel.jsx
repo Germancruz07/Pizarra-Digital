@@ -41,7 +41,7 @@ function Section({ title, children, right }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{title}</h4>
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">{title}</h4>
         {right}
       </div>
       {children}
@@ -78,7 +78,7 @@ function Segmented({ options, value, onChange, id }) {
           type="button"
           title={o.title || o.label}
           onClick={() => onChange(o.value)}
-          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${value === o.value ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${value === o.value ? 'text-slate-900' : 'text-slate-600 hover:text-slate-700'}`}
         >
           {value === o.value && (
             <motion.span layoutId={`seg-${id}`} className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
@@ -99,7 +99,7 @@ function Presets({ values, value, onChange, render }) {
           key={v}
           type="button"
           onClick={() => onChange(v)}
-          className={`grid h-8 min-w-8 place-items-center rounded-lg px-1 text-[11px] font-semibold transition active:scale-90 ${Math.round(value) === v ? 'bg-indigo-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          className={`grid h-8 min-w-8 place-items-center rounded-lg px-1 text-[11px] font-semibold transition active:scale-90 ${Math.round(value) === v ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
           title={`${v}px`}
         >
           {render ? render(v, Math.round(value) === v) : v}
@@ -145,6 +145,7 @@ export default function PropertiesPanel({
   onBringToFront,
   onSendToBack,
   onPickImage,
+  onAltChange,
 }) {
   const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
 
@@ -182,7 +183,7 @@ export default function PropertiesPanel({
             {title}
           </motion.span>
         </AnimatePresence>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`} />
+        <ChevronDown size={16} className={`text-slate-600 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`} />
       </button>
 
       <AnimatePresence initial={false}>
@@ -214,7 +215,7 @@ export default function PropertiesPanel({
                           { value: 'area', label: 'Área', icon: Scissors, title: 'Borra solo la zona por la que pasas' },
                         ]}
                       />
-                      <p className="text-[11px] leading-snug text-slate-500">
+                      <p className="text-[11px] leading-snug text-slate-600">
                         {eraser.mode === 'object'
                           ? 'Elimina por completo cada trazo, figura, texto o imagen que toques.'
                           : 'Borra únicamente la zona por la que pasa el cursor, como una goma real.'}
@@ -243,7 +244,8 @@ export default function PropertiesPanel({
                 {mode === 'select' && (
                   <Hint icon={MousePointer2}>
                     Haz clic en un elemento para seleccionarlo o arrastra para seleccionar varios. <Kbd>Shift</Kbd> añade a la selección y{' '}
-                    <Kbd>Supr</Kbd> elimina. Doble clic crea un texto.
+                    <Kbd>Supr</Kbd> elimina. Doble clic crea un texto. Sin ratón: enfoca el lienzo con <Kbd>Tab</Kbd>,
+                    recorre los elementos con <Kbd>N</Kbd> y muévelos con las flechas.
                   </Hint>
                 )}
 
@@ -300,7 +302,7 @@ export default function PropertiesPanel({
                         >
                           <ColorPicker value={values.fillColor} mergeKey="color:fill" onChange={(c, mk) => set({ fillColor: c }, mk)} />
                           <div>
-                            <span className="text-[11px] font-medium text-slate-500">Opacidad del relleno</span>
+                            <span className="text-[11px] font-medium text-slate-600">Opacidad del relleno</span>
                             <Slider
                               value={(values.fillOpacity ?? 1) * 100}
                               min={5}
@@ -323,7 +325,7 @@ export default function PropertiesPanel({
                       <button
                         type="button"
                         onClick={() => set({ fontWeight: values.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                        className={`grid h-8 w-10 place-items-center rounded-xl transition ${values.fontWeight === 'bold' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        className={`grid h-8 w-10 place-items-center rounded-xl transition ${values.fontWeight === 'bold' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                         title="Negrita"
                       >
                         <Bold size={15} />
@@ -354,6 +356,21 @@ export default function PropertiesPanel({
                         Fin
                       </ToggleButton>
                     </div>
+                  </Section>
+                )}
+
+                {mode === 'selection' && selection.length === 1 && selection[0].type === 'image' && (
+                  <Section title="Texto alternativo">
+                    <textarea
+                      aria-label="Texto alternativo de la imagen"
+                      className="field min-h-16 resize-y text-xs"
+                      placeholder="Describe brevemente la imagen"
+                      maxLength={300}
+                      value={selection[0].alt || ''}
+                      onChange={(e) => onAltChange(selection[0].id, e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                    <p className="text-[11px] leading-snug text-slate-600">Lo leen los lectores de pantalla para describir la imagen.</p>
                   </Section>
                 )}
 
@@ -408,7 +425,7 @@ function ToggleButton({ active, onClick, icon: Icon, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition active:scale-95 ${active ? 'bg-indigo-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition active:scale-95 ${active ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
     >
       <Icon size={14} /> {children}
     </button>
@@ -420,7 +437,7 @@ function ActionButton({ icon: Icon, onClick, children, danger }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition active:scale-95 ${danger ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+      className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition active:scale-95 ${danger ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
     >
       <Icon size={14} /> {children}
     </button>

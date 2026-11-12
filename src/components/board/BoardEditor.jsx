@@ -35,6 +35,7 @@ import { createThumbnail, exportBoardToCanvas } from '../../canvas/renderer';
 import { ensureImagesLoaded, getImage, primeImage } from '../../canvas/imageCache';
 import { ACCEPTED_IMAGE_TYPES, downloadBlob, prepareImage } from '../../utils/image';
 import { pluralize, safeFileName } from '../../utils/format';
+import { altFromFileName, describeElement } from '../../canvas/describe';
 
 const AUTOSAVE_DELAY = 1200;
 const TOOL_KEYS = { v: 'select', h: 'hand', p: 'pen', b: 'pen', e: 'eraser', r: 'rect', o: 'ellipse', g: 'triangle', l: 'line', a: 'arrow', d: 'biarrow', t: 'text' };
@@ -58,6 +59,7 @@ export default function BoardEditor({ boardId, onExit }) {
   const [saveStatus, setSaveStatus] = useState('saved');
   const [confirmClear, setConfirmClear] = useState(false);
   const [uploading, setUploading] = useState(0);
+  const [announcement, setAnnouncement] = useState('');
   const [exporting, setExporting] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -93,7 +95,13 @@ export default function BoardEditor({ boardId, onExit }) {
         reset(els);
         setName(board.name);
         setBackground(board.background);
-        setViewport(board.viewport || { x: 0, y: 0, zoom: 1 });
+        // En pantallas estrechas (celular, tablet vertical) se encuadra todo el contenido al abrir.
+        const contentBounds = unionBounds(els.filter((e) => e.type !== 'erase').map(getElementBounds));
+        if (window.innerWidth < 768 && contentBounds) {
+          setViewport(fitBoundsToView(contentBounds, window.innerWidth, window.innerHeight, 24));
+        } else {
+          setViewport(board.viewport || { x: 0, y: 0, zoom: 1 });
+        }
         setStyle((s) => ({ ...s, strokeColor: BACKGROUNDS[board.background]?.dark ? DARK_STROKE : LIGHT_STROKE }));
         savedRef.current = { elements: els, name: board.name, background: board.background };
         ensureImagesLoaded(els);
@@ -135,7 +143,7 @@ export default function BoardEditor({ boardId, onExit }) {
           const cur = latest.current;
           const clean = cur.elements === snap.elements && cur.name === snap.name && cur.background === snap.background;
           setSaveStatus(clean ? 'saved' : 'dirty');
-          if (manual) toast('Guardado en tu cuenta');
+          if (manual) toast('Guardado en este navegador');
         })
         .catch((err) => {
           setSaveStatus('error');
@@ -185,7 +193,19 @@ export default function BoardEditor({ boardId, onExit }) {
     }
     latest.current.textEdit = null;
     setTextEdit(null);
+    // Devuelve el foco del teclado al lienzo si no se movió a otro control.
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body || active.tagName === 'TEXTAREA') {
+        document.getElementById('lienzo')?.focus({ preventScroll: true });
+      }
+    });
   }, [commit]);
+
+  const updateElement = useCallback(
+    (id, patch, mergeKey) => commit((els) => els.map((e) => (e.id === id ? { ...e, ...patch } : e)), { mergeKey }),
+    [commit]
+  );
 
   const handleTextRequest = useCallback(
     (world, existing) => {
@@ -320,6 +340,7 @@ export default function BoardEditor({ boardId, onExit }) {
           created.push(
             createElement('image', { opacity: 1 }, {
               imageId,
+              alt: altFromFileName(valid[i].name),
               x: center.x - ew / 2 + i * 28,
               y: center.y - eh / 2 + i * 28,
               width: ew,
@@ -490,6 +511,18 @@ export default function BoardEditor({ boardId, onExit }) {
       return;
     }
     if (!mod && !e.altKey) {
+      // N / Mayús+N: recorrer los elementos con el teclado.
+      if (k === 'n') {
+        e.preventDefault();
+        cycleSelection(e.shiftKey ? -1 : 1);
+        return;
+      }
+      // Intro con el lienzo enfocado: crear o editar sin ratón.
+      if (k === 'enter' && e.target?.id === 'lienzo') {
+        e.preventDefault();
+        insertWithKeyboard();
+        return;
+      }
       if (k === 'i') {
         pickImage();
         return;
@@ -497,6 +530,46 @@ export default function BoardEditor({ boardId, onExit }) {
       if (TOOL_KEYS[k]) changeTool(TOOL_KEYS[k]);
     }
   };
+
+  function cycleSelection(dir) {
+    const items = elements.filter((el) => el.type !== 'erase');
+    if (!items.length) return;
+    const current = selectedIds.length ? items.findIndex((el) => el.id === selectedIds[selectedIds.length - 1]) : -1;
+    const next = current === -1 ? (dir > 0 ? 0 : items.length - 1) : (current + dir + items.length) % items.length;
+    setTool('select');
+    setSelectedIds([items[next].id]);
+    setAnnouncement(`Seleccionado ${next + 1} de ${items.length}: ${describeElement(items[next])}`);
+  }
+
+  function insertWithKeyboard() {
+    if (selection.length === 1 && selection[0].type === 'text') {
+      handleTextRequest(null, selection[0]);
+      return;
+    }
+    const vp = latest.current.viewport;
+    const { w, h } = viewSizeRef.current;
+    const c = { x: (w / 2 - vp.x) / vp.zoom, y: (h / 2 - vp.y) / vp.zoom };
+    if (tool === 'text') {
+      handleTextRequest(c, null);
+      return;
+    }
+    let el = null;
+    if (['rect', 'ellipse', 'triangle'].includes(tool)) {
+      el = createElement(tool, style, { x: c.x - 80, y: c.y - 60, width: 160, height: 120 });
+    } else if (['line', 'arrow', 'biarrow'].includes(tool)) {
+      el = createElement(tool === 'line' ? 'line' : 'arrow', { ...style, arrowStart: tool === 'biarrow', arrowEnd: tool !== 'line' }, {
+        points: [[c.x - 90, c.y], [c.x + 90, c.y]],
+      });
+    }
+    if (!el) {
+      setAnnouncement('Elige una herramienta de figura, línea o texto y pulsa Intro para insertarla en el centro.');
+      return;
+    }
+    commit((els) => [...els, el]);
+    setTool('select');
+    setSelectedIds([el.id]);
+    setAnnouncement(`${describeElement(el)} insertado en el centro y seleccionado. Usa las flechas para moverlo.`);
+  }
 
   useEffect(() => {
     const onKey = (e) => keyHandler.current(e);
@@ -539,11 +612,11 @@ export default function BoardEditor({ boardId, onExit }) {
     return (
       <div className="grid h-full place-items-center bg-slate-50 p-6">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="max-w-sm text-center">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-slate-100 text-slate-400">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-slate-100 text-slate-600">
             <FileQuestion size={30} />
           </div>
           <h2 className="mt-4 text-xl font-bold text-slate-900">Pizarra no encontrada</h2>
-          <p className="mt-1 text-sm text-slate-500">No existe o pertenece a otra cuenta.</p>
+          <p className="mt-1 text-sm text-slate-600">No existe o pertenece a otra cuenta.</p>
           <button className="btn-primary mt-6" onClick={onExit}>
             <ArrowLeft size={16} /> Volver a mis pizarras
           </button>
@@ -592,7 +665,7 @@ export default function BoardEditor({ boardId, onExit }) {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
-            className={`pointer-events-none absolute inset-0 grid place-items-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}
+            className={`pointer-events-none absolute inset-0 grid place-items-center ${isDark ? 'text-slate-600' : 'text-slate-600'}`}
           >
             <div className="flex flex-col items-center gap-2 text-center">
               <Sparkles size={30} className="text-indigo-400" />
@@ -634,9 +707,14 @@ export default function BoardEditor({ boardId, onExit }) {
         onBringToFront={bringToFront}
         onSendToBack={sendToBack}
         onPickImage={pickImage}
+        onAltChange={(id, alt) => updateElement(id, { alt }, `alt:${id}`)}
       />
 
       <Toolbar tool={tool} onToolChange={changeTool} onPickImage={pickImage} />
+
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
 
       <ZoomControls
         zoom={viewport.zoom}
@@ -652,9 +730,9 @@ export default function BoardEditor({ boardId, onExit }) {
         transition={{ delay: 0.2 }}
         className="glass pointer-events-none absolute bottom-[84px] left-3 z-20 hidden items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 sm:flex lg:bottom-4"
       >
-        <Shapes size={14} className="text-indigo-500" />
+        <Shapes size={14} aria-hidden="true" className="text-indigo-600" />
         {pluralize(elementCount, 'elemento', 'elementos')}
-        {selection.length > 0 && tool === 'select' && <span className="text-indigo-600">· {selection.length} seleccionado(s)</span>}
+        {selection.length > 0 && tool === 'select' && <span className="text-indigo-700">· {selection.length} seleccionado(s)</span>}
       </motion.div>
 
       <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden onChange={onFileInput} />

@@ -11,6 +11,7 @@ import BoardCard from './BoardCard';
 import NewBoardModal from './NewBoardModal';
 import { ConfirmDialog, PromptDialog } from '../ui/Dialogs';
 import { pluralize } from '../../utils/format';
+import SiteFooter from '../legal/SiteFooter';
 
 const SORTS = [
   ['recent', 'Recientes'],
@@ -101,19 +102,21 @@ export default function Dashboard({ onOpenBoard }) {
   const firstName = user.name.split(' ')[0];
 
   return (
-    <div className="min-h-full bg-[radial-gradient(ellipse_at_top,_#eef0ff,_#f5f6fb_55%)] dark:bg-[radial-gradient(ellipse_at_top,_#1d1f3a,_#0e0f15_55%)]">
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(ellipse_at_top,_#eef0ff,_#f5f6fb_55%)] dark:bg-[radial-gradient(ellipse_at_top,_#1d1f3a,_#0e0f15_55%)]">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-linear-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/30">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-linear-to-br from-indigo-600 to-violet-700 text-white shadow-md shadow-indigo-500/30" aria-hidden="true">
               <PenLine size={18} />
             </div>
             <span className="hidden text-lg font-bold tracking-tight sm:block">Pizarra</span>
           </div>
 
-          <div className="relative mx-auto w-full max-w-md">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div role="search" className="relative mx-auto w-full min-w-0 max-w-md">
+            <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" />
             <input
+              type="search"
+              aria-label="Buscar pizarras por nombre"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar pizarras…"
@@ -122,7 +125,7 @@ export default function Dashboard({ onOpenBoard }) {
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-slate-600 hover:bg-slate-200 hover:text-slate-600"
                 aria-label="Limpiar búsqueda"
               >
                 <X size={14} />
@@ -135,7 +138,7 @@ export default function Dashboard({ onOpenBoard }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+      <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -143,8 +146,8 @@ export default function Dashboard({ onOpenBoard }) {
         >
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Hola, {firstName} 👋</h1>
-            <p className="mt-1.5 text-slate-500">
-              {loading ? 'Cargando tus pizarras…' : `Tienes ${pluralize(boards.length, 'pizarra guardada', 'pizarras guardadas')} en tu cuenta.`}
+            <p className="mt-1.5 text-slate-600" aria-live="polite">
+              {loading ? 'Cargando tus pizarras…' : `Tienes ${pluralize(boards.length, 'pizarra guardada', 'pizarras guardadas')} en este navegador.`}
             </p>
           </div>
           <button className="btn-primary self-start sm:self-auto" onClick={() => setCreating(true)}>
@@ -153,15 +156,17 @@ export default function Dashboard({ onOpenBoard }) {
         </motion.div>
 
         <div className="mt-8 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
-            <LayoutGrid size={15} /> Mis pizarras
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-600">
+            <LayoutGrid size={15} aria-hidden="true" /> Mis pizarras
           </h2>
-          <div className="relative flex rounded-xl bg-slate-200/60 p-0.5 text-xs font-semibold">
+          <div role="group" aria-label="Ordenar pizarras" className="relative flex rounded-xl bg-slate-200/60 p-0.5 text-xs font-semibold">
             {SORTS.map(([id, label]) => (
               <button
                 key={id}
+                type="button"
+                aria-pressed={sort === id}
                 onClick={() => setSort(id)}
-                className={`relative z-10 rounded-lg px-3 py-1.5 transition-colors ${sort === id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`relative z-10 rounded-lg px-3 py-1.5 transition-colors ${sort === id ? 'text-slate-900' : 'text-slate-600 hover:text-slate-800'}`}
               >
                 {sort === id && <motion.span layoutId="sort-pill" className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm" />}
                 {label}
@@ -177,9 +182,9 @@ export default function Dashboard({ onOpenBoard }) {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               onClick={() => setCreating(true)}
-              className="group flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-300 bg-white/50 text-slate-500 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-400 hover:bg-indigo-50/60 hover:text-indigo-600"
+              className="group flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-300 bg-white/50 text-slate-600 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-400 hover:bg-indigo-50/60 hover:text-indigo-700"
             >
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110">
+              <span aria-hidden="true" className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110">
                 <Plus size={26} />
               </span>
               <span className="font-semibold">Crear pizarra</span>
@@ -219,8 +224,8 @@ export default function Dashboard({ onOpenBoard }) {
         </div>
 
         {!loading && query && !visible.length && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-16 flex flex-col items-center text-center text-slate-500">
-            <SearchX size={40} className="text-slate-300" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-16 flex flex-col items-center text-center text-slate-600">
+            <SearchX size={40} aria-hidden="true" className="text-slate-600" />
             <p className="mt-3 font-semibold text-slate-700">Sin resultados para “{query}”</p>
             <p className="text-sm">Prueba con otro nombre.</p>
           </motion.div>
@@ -239,12 +244,13 @@ export default function Dashboard({ onOpenBoard }) {
       <ConfirmDialog
         open={!!deleting}
         title="¿Eliminar pizarra?"
-        message={`“${deleting?.name || ''}” se eliminará de tu cuenta junto con sus imágenes. Esta acción no se puede deshacer.`}
+        message={`“${deleting?.name || ''}” se eliminará de este navegador junto con sus imágenes. Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         danger
         onConfirm={handleDelete}
         onClose={() => setDeleting(null)}
       />
+      <SiteFooter />
     </div>
   );
 }

@@ -1,17 +1,28 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, PenLine, Shapes, Sparkles, Type, User } from 'lucide-react';
+import { ArrowRight, AtSign, ChevronDown, Eye, EyeOff, Loader2, Lock, PenLine, Shapes, ShieldCheck, Type, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import AvatarPicker from './AvatarPicker';
 import ThemeToggle from '../ui/ThemeToggle';
+import SiteFooter from '../legal/SiteFooter';
 import { randomAvatar } from '../../data/avatars';
 
-function Field({ icon: Icon, children }) {
+function Field({ icon: Icon, id, label, hint, children }) {
   return (
-    <div className="relative">
-      <Icon size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-      {children}
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+      <div className="relative">
+        <Icon size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" />
+        {children}
+      </div>
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1 text-xs text-slate-600">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -19,23 +30,24 @@ function Field({ icon: Icon, children }) {
 const FEATURES = [
   { icon: PenLine, text: 'Lápiz suave, formas, flechas y texto editable' },
   { icon: Shapes, text: 'Cada trazo es un objeto: muévelo y redimensiónalo' },
-  { icon: Sparkles, text: 'Autoguardado en tu cuenta, al instante' },
+  { icon: ShieldCheck, text: 'Sin rastreo: tus pizarras se guardan solo en tu navegador' },
 ];
 
 function Hero() {
   return (
-    <div className="relative hidden overflow-hidden bg-linear-to-br from-indigo-600 via-violet-600 to-fuchsia-600 lg:flex lg:flex-col lg:justify-between lg:p-12">
-      <div className="animate-blob absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-      <div className="animate-blob absolute -bottom-24 right-0 h-96 w-96 rounded-full bg-fuchsia-300/20 blur-3xl [animation-delay:-5s]" />
+    <div className="relative hidden overflow-hidden bg-linear-to-br from-indigo-700 via-violet-700 to-fuchsia-700 lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <div aria-hidden="true" className="animate-blob absolute -left-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+      <div aria-hidden="true" className="animate-blob absolute -bottom-24 right-0 h-96 w-96 rounded-full bg-fuchsia-300/20 blur-3xl [animation-delay:-5s]" />
 
       <div className="relative flex items-center gap-3 text-white">
-        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 backdrop-blur">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 backdrop-blur" aria-hidden="true">
           <PenLine size={22} />
         </div>
         <span className="text-xl font-bold tracking-tight">Pizarra</span>
       </div>
 
-      <div className="relative h-72">
+      {/* Ilustración decorativa */}
+      <div className="relative h-72" aria-hidden="true">
         <motion.div
           className="absolute left-6 top-4 h-28 w-40 rounded-2xl border-4 border-white/80 bg-amber-200/90 shadow-2xl"
           animate={{ y: [0, -12, 0], rotate: [-4, -2, -4] }}
@@ -46,13 +58,7 @@ function Hero() {
           animate={{ y: [0, 14, 0] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.svg
-          viewBox="0 0 300 120"
-          className="absolute left-10 top-40 w-80"
-          initial={{ pathLength: 0 }}
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        >
+        <motion.svg viewBox="0 0 300 120" className="absolute left-10 top-40 w-80" animate={{ y: [0, -6, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
           <motion.path
             d="M10 80 C 60 10, 110 120, 160 50 S 260 20, 290 70"
             fill="none"
@@ -65,7 +71,7 @@ function Hero() {
           />
         </motion.svg>
         <motion.div
-          className="absolute right-10 top-28 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-2xl"
+          className="absolute right-10 top-28 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-indigo-800 shadow-2xl"
           animate={{ y: [0, -10, 0], rotate: [3, 1, 3] }}
           transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
         >
@@ -80,19 +86,13 @@ function Hero() {
           siempre donde la dejaste.
         </h1>
         <ul className="space-y-3">
-          {FEATURES.map(({ icon: Icon, text }, i) => (
-            <motion.li
-              key={text}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + i * 0.12 }}
-              className="flex items-center gap-3 text-white/90"
-            >
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/15">
+          {FEATURES.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-center gap-3 text-white">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/15" aria-hidden="true">
                 <Icon size={16} />
               </span>
               {text}
-            </motion.li>
+            </li>
           ))}
         </ul>
       </div>
@@ -104,8 +104,10 @@ export default function AuthScreen() {
   const { login, register } = useAuth();
   const toast = useToast();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ username: '', password: '', displayName: '' });
   const [avatar, setAvatar] = useState(randomAvatar);
+  const [showAvatar, setShowAvatar] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(0);
@@ -125,11 +127,11 @@ export default function AuthScreen() {
     setError('');
     try {
       if (isRegister) {
-        const u = await register({ ...form, avatar });
-        toast(`¡Bienvenido, ${u.name.split(' ')[0]}! Te preparamos una pizarra de ejemplo.`);
+        const u = await register({ ...form, avatar, acceptedTerms });
+        toast(`¡Bienvenido, ${u.name}! Te preparamos una pizarra de ejemplo.`);
       } else {
-        const u = await login(form);
-        toast(`¡Hola de nuevo, ${u.name.split(' ')[0]}!`);
+        const u = await login({ username: form.username, password: form.password });
+        toast(`¡Hola de nuevo, ${u.name}!`);
       }
     } catch (err) {
       setError(err.message);
@@ -142,144 +144,193 @@ export default function AuthScreen() {
   return (
     <div className="grid min-h-full lg:grid-cols-[1.05fr_1fr]">
       <Hero />
-      <div className="relative flex items-center justify-center overflow-hidden px-5 py-10">
+      <div className="relative flex flex-col overflow-hidden">
         <ThemeToggle className="absolute right-4 top-4 z-10" />
-        <div className="animate-blob absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-200/50 blur-3xl lg:hidden" />
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 200 }}
-          className="relative w-full max-w-md"
-        >
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-linear-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
-              <PenLine size={22} />
+        <main id="contenido" className="flex flex-1 items-center justify-center px-5 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 200 }}
+            className="relative w-full max-w-md"
+          >
+            <div className="mb-8 flex items-center gap-3 lg:hidden">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-linear-to-br from-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-500/30" aria-hidden="true">
+                <PenLine size={22} />
+              </div>
+              <span className="text-xl font-bold tracking-tight">Pizarra</span>
             </div>
-            <span className="text-xl font-bold tracking-tight">Pizarra</span>
-          </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                {isRegister ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
-              </h2>
-              <p className="mt-1.5 text-slate-500">
-                {isRegister ? 'Tu espacio privado para pensar en grande.' : 'Inicia sesión para ver tus pizarras.'}
-              </p>
-            </motion.div>
-          </AnimatePresence>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              {isRegister ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
+            </h2>
+            <p className="mt-1.5 text-slate-600">
+              {isRegister ? 'Solo necesitas un usuario y una contraseña.' : 'Inicia sesión para ver tus pizarras.'}
+            </p>
 
-          <div className="relative mt-7 flex rounded-2xl bg-slate-200/60 p-1 text-sm font-semibold">
-            {[
-              ['login', 'Iniciar sesión'],
-              ['register', 'Registrarse'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => switchMode(id)}
-                className={`relative z-10 flex-1 rounded-xl py-2.5 transition-colors ${mode === id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            <div role="tablist" aria-label="Acceso" className="relative mt-7 flex rounded-2xl bg-slate-200/60 p-1 text-sm font-semibold">
+              {[
+                ['login', 'Iniciar sesión'],
+                ['register', 'Crear cuenta'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === id}
+                  onClick={() => switchMode(id)}
+                  className={`relative z-10 flex-1 rounded-xl py-2.5 transition-colors ${mode === id ? 'text-slate-900' : 'text-slate-600 hover:text-slate-800'}`}
+                >
+                  {mode === id && (
+                    <motion.span layoutId="auth-tab" className="absolute inset-0 -z-10 rounded-xl bg-white shadow" transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
+                  )}
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <form key={shake} onSubmit={submit} noValidate className={`mt-6 space-y-4 ${shake ? 'animate-shake' : ''}`}>
+              <Field
+                icon={AtSign}
+                id="username"
+                label="Usuario"
+                hint={isRegister ? '3 a 30 caracteres: letras sin acentos, números, punto, guion o guion bajo.' : 'Si creaste tu cuenta con un correo, escríbelo aquí.'}
               >
-                {mode === id && (
-                  <motion.span
-                    layoutId="auth-tab"
-                    className="absolute inset-0 -z-10 rounded-xl bg-white shadow"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
+                <input
+                  id="username"
+                  className="field pl-10"
+                  value={form.username}
+                  onChange={set('username')}
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-describedby="username-hint"
+                  required
+                />
+              </Field>
+
+              <Field icon={Lock} id="password" label="Contraseña" hint={isRegister ? 'Mínimo 6 caracteres.' : null}>
+                <input
+                  id="password"
+                  className="field pl-10 pr-11"
+                  type={showPw ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={set('password')}
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  aria-describedby={isRegister ? 'password-hint' : undefined}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                  aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPw}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </Field>
+
+              <AnimatePresence initial={false}>
+                {isRegister && (
+                  <motion.div
+                    key="register-fields"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    <Field icon={User} id="displayName" label="Nombre visible (opcional)" hint="Si lo dejas vacío, se mostrará tu usuario.">
+                      <input
+                        id="displayName"
+                        className="field pl-10"
+                        value={form.displayName}
+                        onChange={set('displayName')}
+                        maxLength={40}
+                        autoComplete="nickname"
+                        aria-describedby="displayName-hint"
+                      />
+                    </Field>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAvatar((v) => !v)}
+                        aria-expanded={showAvatar}
+                        className="flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:text-indigo-800"
+                      >
+                        <ChevronDown size={16} className={`transition-transform ${showAvatar ? 'rotate-180' : ''}`} aria-hidden="true" />
+                        Personalizar avatar (opcional)
+                      </button>
+                      {showAvatar && (
+                        <div className="mt-2">
+                          <AvatarPicker value={avatar} onChange={setAvatar} name={form.displayName || form.username} />
+                        </div>
+                      )}
+                    </div>
+
+                    <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm leading-relaxed text-slate-700">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 shrink-0 accent-indigo-600"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        required
+                      />
+                      <span>
+                        He leído y acepto los{' '}
+                        <a href="#/legal/terminos" target="_blank" rel="noopener" className="font-semibold text-indigo-700 underline underline-offset-2">
+                          Términos y condiciones
+                        </a>{' '}
+                        y la{' '}
+                        <a href="#/legal/privacidad" target="_blank" rel="noopener" className="font-semibold text-indigo-700 underline underline-offset-2">
+                          Política de privacidad
+                        </a>
+                        .
+                      </span>
+                    </label>
+                  </motion.div>
                 )}
-                {label}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    role="alert"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <button type="submit" disabled={busy || (isRegister && !acceptedTerms)} className="btn-primary group w-full py-3">
+                {busy ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : null}
+                {isRegister ? 'Crear cuenta' : 'Entrar'}
+                {!busy && <ArrowRight size={17} aria-hidden="true" className="transition-transform group-hover:translate-x-1" />}
               </button>
-            ))}
-          </div>
+            </form>
 
-          <form key={shake} onSubmit={submit} className={`mt-6 space-y-3.5 ${shake ? 'animate-shake' : ''}`}>
-            <AnimatePresence initial={false}>
-              {isRegister && (
-                <motion.div
-                  key="register-fields"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3.5 overflow-hidden"
-                >
-                  <Field icon={User}>
-                    <input className="field pl-10" placeholder="Tu nombre" value={form.name} onChange={set('name')} autoComplete="name" />
-                  </Field>
-                  <AvatarPicker value={avatar} onChange={setAvatar} name={form.name} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <Field icon={Mail}>
-              <input
-                className="field pl-10"
-                type="email"
-                placeholder="correo@ejemplo.com"
-                value={form.email}
-                onChange={set('email')}
-                autoComplete="email"
-              />
-            </Field>
-            <Field icon={Lock}>
-              <input
-                className="field pl-10 pr-11"
-                type={showPw ? 'text' : 'password'}
-                placeholder={isRegister ? 'Contraseña (mín. 6 caracteres)' : 'Contraseña'}
-                value={form.password}
-                onChange={set('password')}
-                autoComplete={isRegister ? 'new-password' : 'current-password'}
-              />
+            <p className="mt-6 text-center text-sm text-slate-600">
+              {isRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
               <button
                 type="button"
-                onClick={() => setShowPw((v) => !v)}
-                className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                onClick={() => switchMode(isRegister ? 'login' : 'register')}
+                className="font-semibold text-indigo-700 underline-offset-2 hover:underline"
               >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                {isRegister ? 'Inicia sesión' : 'Crea una gratis'}
               </button>
-            </Field>
-
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600"
-                >
-                  {error}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            <button type="submit" disabled={busy} className="btn-primary group w-full py-3">
-              {busy ? <Loader2 size={18} className="animate-spin" /> : null}
-              {isRegister ? 'Crear cuenta' : 'Entrar'}
-              {!busy && <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-slate-500">
-            {isRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
-            <button
-              type="button"
-              onClick={() => switchMode(isRegister ? 'login' : 'register')}
-              className="font-semibold text-indigo-600 hover:text-indigo-700"
-            >
-              {isRegister ? 'Inicia sesión' : 'Regístrate gratis'}
-            </button>
-          </p>
-          <p className="mt-4 text-center text-xs text-slate-400">
-            Tus datos se guardan de forma privada en este navegador.
-          </p>
-        </motion.div>
+            </p>
+            <p className="mt-4 text-center text-xs leading-relaxed text-slate-600">
+              Tus datos se guardan solo en este navegador: no se envían a ningún servidor. Puedes descargarlos o
+              borrarlos cuando quieras desde tu perfil.
+            </p>
+          </motion.div>
+        </main>
+        <SiteFooter />
       </div>
     </div>
   );

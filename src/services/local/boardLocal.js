@@ -1,4 +1,4 @@
-import { idbGet, idbPut, idbDelete, idbGetAllByIndex } from '../storage/indexedDb';
+import { idbGet, idbPut, idbDelete, idbGetAllByIndex, idbGetAllKeysByIndex, idbDeleteMany } from '../storage/indexedDb';
 import { uid } from '../../utils/id';
 import { localAssetAdapter } from './assetLocal';
 import { buildWelcomeElements, WELCOME_IMAGE_SVG, WELCOME_IMAGE_SIZE } from '../../data/welcomeBoard';
@@ -107,7 +107,21 @@ async function seedWelcomeBoard(ownerId) {
   return summary;
 }
 
+/** Todas las pizarras completas del usuario (para la descarga de datos). */
+async function exportBoards(ownerId) {
+  return idbGetAllByIndex('boards', 'ownerId', ownerId);
+}
+
+/** Borra todas las pizarras e imágenes del usuario (al eliminar la cuenta). */
+async function deleteAllForOwner(ownerId) {
+  const keys = await idbGetAllKeysByIndex('boards', 'ownerId', ownerId);
+  if (keys.length) await idbDeleteMany('boards', keys);
+  await localAssetAdapter.deleteAllForOwner(ownerId);
+}
+
 export const localBoardAdapter = {
+  exportBoards,
+  deleteAllForOwner,
   listBoards,
   getBoard,
   createBoard,

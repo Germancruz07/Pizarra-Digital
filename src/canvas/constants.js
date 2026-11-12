@@ -1,4 +1,4 @@
-export const FONT_FAMILY = 'Inter, "Segoe UI", system-ui, -apple-system, sans-serif';
+export const FONT_FAMILY = '"Inter Variable", Inter, "Segoe UI", system-ui, -apple-system, sans-serif';
 export const LINE_HEIGHT = 1.25;
 
 export const MIN_ZOOM = 0.1;

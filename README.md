@@ -69,6 +69,8 @@ src/
 | Ctrl+A | Seleccionar todo |
 | Supr / Retroceso | Eliminar selección |
 | Flechas (Shift = ×10) | Mover selección |
+| N / Shift+N | Seleccionar el elemento siguiente / anterior |
+| Intro (con el lienzo enfocado) | Insertar la figura o texto de la herramienta activa, o editar el texto seleccionado |
 | Ctrl + / Ctrl - / Ctrl 0 / Ctrl 1 | Zoom + / − / 100 % / ajustar |
 | Espacio + arrastrar, rueda, botón central | Desplazarse por el lienzo |
 | Ctrl + rueda, pellizco | Zoom al cursor |
@@ -79,6 +81,22 @@ src/
 
 La UI solo importa `authService`, `boardService` y `assetService` desde `src/services/index.js`.
 Crea adaptadores con los mismos métodos (descritos en ese archivo) y reasígnalos allí; no hace falta tocar componentes.
+
+## Privacidad, legal y accesibilidad
+
+- **Datos mínimos:** para crear una cuenta solo se pide usuario y contraseña; el nombre visible y el avatar son opcionales.
+  No se pide correo porque la app no envía correos.
+- **Términos:** casilla sin marcar al registrarse. Se guarda qué versión se aceptó y cuándo (`termsAcceptance` y `consentLog`).
+  Si cambias los textos legales, sube `TERMS_VERSION` / `PRIVACY_VERSION` en `src/legal/config.js` y se pedirá aceptar de nuevo.
+- **Tus datos:** «Perfil → Descargar mis datos» (JSON) y «Eliminar mi cuenta» (borra cuenta, pizarras e imágenes).
+- **Cookies:** banner con «Aceptar» y «Rechazar» del mismo peso; solo hay almacenamiento esencial y una preferencia opcional (tema).
+- **Sin rastreo:** no hay analítica ni SDKs de terceros; la fuente Inter se sirve desde el propio sitio y una
+  Content-Security-Policy (en `vite.config.js`) bloquea cualquier script o conexión externa.
+- **Páginas legales** (públicas, sin iniciar sesión): `#/legal/privacidad`, `terminos`, `cookies`, `licencias`, `contacto`.
+- **Licencias de terceros:** `scripts/generate-licenses.mjs` genera `third-party-licenses.txt/json` en cada `dev` y `build`.
+- **Accesibilidad:** contraste AA verificado en tema claro y oscuro, foco visible, enlace «Saltar al contenido», modales con foco atrapado,
+  texto alternativo en imágenes (editable en el panel), descripción del lienzo para lectores de pantalla y uso por teclado
+  (Tab enfoca el lienzo, **N** recorre elementos, **Intro** inserta la figura/texto de la herramienta activa).
 
 ## Claves de API
 

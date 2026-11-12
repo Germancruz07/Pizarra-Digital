@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useConsent } from './ConsentContext';
 
 const STORAGE_KEY = 'pd:theme';
 const ThemeContext = createContext(null);
@@ -15,6 +16,7 @@ function readPreference() {
 
 /** Tema de la interfaz: 'light' | 'dark' | 'system' (sigue al sistema operativo). */
 export function ThemeProvider({ children }) {
+  const { allowsPreferences } = useConsent();
   const [preference, setPreference] = useState(readPreference);
   const [systemDark, setSystemDark] = useState(() => media().matches);
 
@@ -31,19 +33,22 @@ export function ThemeProvider({ children }) {
     const root = document.documentElement;
     root.classList.add('theme-transition');
     root.classList.toggle('dark', resolved === 'dark');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#12131a' : '#6366f1');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#12131a' : '#4f46e5');
     const t = setTimeout(() => root.classList.remove('theme-transition'), 350);
     return () => clearTimeout(t);
   }, [resolved]);
 
-  const setTheme = useCallback((value) => {
-    setPreference(value);
+  // El tema solo se guarda si la persona aceptó la categoría "Preferencias".
+  useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, value);
+      if (allowsPreferences) localStorage.setItem(STORAGE_KEY, preference);
+      else localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* sin almacenamiento: el tema solo dura esta sesión */
     }
-  }, []);
+  }, [preference, allowsPreferences]);
+
+  const setTheme = useCallback((value) => setPreference(value), []);
 
   const cycleTheme = useCallback(() => {
     setTheme(preference === 'light' ? 'dark' : preference === 'dark' ? 'system' : 'light');

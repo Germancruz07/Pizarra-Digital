@@ -4,6 +4,10 @@ dist
 .DS_Store
 .claude/
 
+# Generados por scripts/generate-licenses.mjs en cada dev/build
+public/third-party-licenses.txt
+public/third-party-licenses.json
+
 # Variables de entorno: nunca se suben al repositorio
 .env
 .env.*

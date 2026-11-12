@@ -53,7 +53,7 @@ export default function AvatarPicker({ value, onChange, name }) {
                 key={id}
                 type="button"
                 onClick={() => setType(id)}
-                className={`relative z-10 flex-1 rounded-lg py-1.5 transition-colors ${value.type === id ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`relative z-10 flex-1 rounded-lg py-1.5 transition-colors ${value.type === id ? 'text-slate-900' : 'text-slate-600 hover:text-slate-700'}`}
               >
                 {value.type === id && (
                   <motion.span layoutId="avatar-tab" className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
@@ -66,7 +66,7 @@ export default function AvatarPicker({ value, onChange, name }) {
         <button
           type="button"
           onClick={() => onChange(randomAvatar())}
-          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition hover:bg-white hover:text-indigo-600"
+          className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 transition hover:bg-white hover:text-indigo-600"
           title="Aleatorio"
         >
           <Shuffle size={16} />
@@ -113,7 +113,7 @@ export default function AvatarPicker({ value, onChange, name }) {
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onFile} />
     </div>
   );

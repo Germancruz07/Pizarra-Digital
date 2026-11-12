@@ -2,10 +2,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, CircleDot, Loader2 } from 'lucide-react';
 
 const STATES = {
-  saved: { icon: CheckCircle2, text: 'Guardado en tu cuenta', cls: 'text-emerald-600 bg-emerald-50' },
-  saving: { icon: Loader2, text: 'Guardando…', cls: 'text-indigo-600 bg-indigo-50', spin: true },
-  dirty: { icon: CircleDot, text: 'Cambios sin guardar', cls: 'text-amber-600 bg-amber-50' },
-  error: { icon: AlertCircle, text: 'Error al guardar', cls: 'text-rose-600 bg-rose-50' },
+  saved: { icon: CheckCircle2, text: 'Guardado en este navegador', cls: 'text-emerald-700 bg-emerald-50' },
+  saving: { icon: Loader2, text: 'Guardando…', cls: 'text-indigo-700 bg-indigo-50', spin: true },
+  dirty: { icon: CircleDot, text: 'Cambios sin guardar', cls: 'text-amber-700 bg-amber-50' },
+  error: { icon: AlertCircle, text: 'Error al guardar', cls: 'text-rose-700 bg-rose-50' },
 };
 
 export default function SaveIndicator({ status }) {

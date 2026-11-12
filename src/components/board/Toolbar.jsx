@@ -40,18 +40,23 @@ export default function Toolbar({ tool, onToolChange, onPickImage }) {
         initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', damping: 22, stiffness: 240, delay: 0.05 }}
+        role="toolbar"
+        aria-label="Herramientas de dibujo"
         className="glass scroll-thin pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-2xl p-1.5"
       >
         {TOOL_ITEMS.map((item, i) => {
-          if (item === 'sep') return <span key={`sep-${i}`} className="mx-1 h-6 w-px shrink-0 bg-slate-200" />;
+          if (item === 'sep') return <span key={`sep-${i}`} aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-slate-200" />;
           const active = tool === item.id;
           const Icon = item.icon;
+          const isAction = item.id === 'image';
           return (
             <Fragment key={item.id}>
               <button
                 type="button"
-                onClick={() => (item.id === 'image' ? onPickImage() : onToolChange(item.id))}
-                aria-label={`${item.label} (${item.key})`}
+                onClick={() => (isAction ? onPickImage() : onToolChange(item.id))}
+                aria-label={isAction ? `Subir imagen (${item.key})` : `${item.label} (${item.key})`}
+                aria-pressed={isAction ? undefined : active}
+                aria-keyshortcuts={item.key}
                 title={`${item.label} — ${item.key}`}
                 className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 ${
                   active ? 'text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -60,15 +65,16 @@ export default function Toolbar({ tool, onToolChange, onPickImage }) {
                 {active && (
                   <motion.span
                     layoutId="dock-active"
-                    className="absolute inset-0 rounded-xl bg-linear-to-br from-indigo-500 to-violet-500 shadow-lg shadow-indigo-500/35"
+                    className="absolute inset-0 rounded-xl bg-linear-to-br from-indigo-600 to-violet-700 shadow-lg shadow-indigo-500/35"
                     transition={{ type: 'spring', stiffness: 500, damping: 34 }}
                   />
                 )}
-                <motion.span whileTap={{ scale: 0.82 }} className="relative z-10">
+                <motion.span whileTap={{ scale: 0.82 }} className="relative z-10" aria-hidden="true">
                   <Icon size={19} strokeWidth={active ? 2.3 : 2} />
                 </motion.span>
                 <span
-                  className={`absolute bottom-0.5 right-1 z-10 text-[8px] font-bold ${active ? 'text-white/70' : 'text-slate-400'}`}
+                  aria-hidden="true"
+                  className={`absolute bottom-0.5 right-1 z-10 text-[9px] font-bold ${active ? 'text-white' : 'text-slate-600'}`}
                 >
                   {item.key}
                 </span>

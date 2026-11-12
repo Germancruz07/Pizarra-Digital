@@ -7,11 +7,14 @@
  * (todos los métodos devuelven Promesas) y reasignarlos aquí:
  *
  *   AuthService
- *     register({ name, email, password, avatar }) -> User
- *     login({ email, password })                  -> User
+ *     register({ username, displayName?, password, avatar?, acceptance }) -> User
+ *     login({ username, password })               -> User
  *     logout()                                    -> void
  *     getCurrentUser()                            -> User | null
  *     updateProfile(userId, { name?, avatar? })   -> User
+ *     acceptTerms(userId, acceptance)             -> User   (registra versión y fecha)
+ *     exportProfile(userId)                       -> User   (para "Descargar mis datos")
+ *     deleteAccount(userId)                       -> void
  *
  *   BoardService (todas las operaciones van aisladas por ownerId)
  *     listBoards(ownerId)                         -> BoardSummary[]
@@ -22,10 +25,14 @@
  *     duplicateBoard(ownerId, id)                 -> BoardSummary
  *     deleteBoard(ownerId, id)                    -> void
  *     seedWelcomeBoard(ownerId)                   -> BoardSummary
+ *     exportBoards(ownerId)                       -> Board[]
+ *     deleteAllForOwner(ownerId)                  -> void   (pizarras + imágenes)
  *
  *   AssetService (binarios pesados: imágenes)
  *     saveImage(ownerId, blob, meta)              -> imageId
  *     getImageBlob(imageId)                       -> Blob | null
+ *     listImages(ownerId)                         -> ImageRecord[]
+ *     deleteAllForOwner(ownerId)                  -> void
  *     cleanupUnreferenced(ownerId, Set<imageId>)  -> number
  */
 import { localAuthAdapter } from './local/authLocal';

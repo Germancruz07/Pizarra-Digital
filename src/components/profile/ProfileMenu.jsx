@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, LogOut, UserCog } from 'lucide-react';
+import { ChevronDown, LogOut, ShieldCheck, UserCog } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -32,11 +32,13 @@ export default function ProfileMenu({ compact = false, beforeLogout }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-2 rounded-full p-0.5 transition hover:bg-slate-100 ${compact ? '' : 'pr-2.5'}`}
-        aria-label="Menú de perfil"
+        aria-label={`Menú de perfil de ${user.name}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         <Avatar avatar={user.avatar} name={user.name} size={compact ? 32 : 36} />
         {!compact && <span className="hidden max-w-[140px] truncate text-sm font-semibold text-slate-700 sm:block">{user.name}</span>}
-        <ChevronDown size={15} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={15} aria-hidden="true" className={`text-slate-600 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -52,7 +54,7 @@ export default function ProfileMenu({ compact = false, beforeLogout }) {
               <Avatar avatar={user.avatar} name={user.name} size={44} />
               <div className="min-w-0">
                 <p className="truncate font-semibold text-slate-900">{user.name}</p>
-                <p className="truncate text-xs text-slate-500">{user.email}</p>
+                <p className="truncate text-xs text-slate-600">@{user.username || user.email}</p>
               </div>
             </div>
             <div className="p-1.5">
@@ -63,11 +65,18 @@ export default function ProfileMenu({ compact = false, beforeLogout }) {
                 }}
                 className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
               >
-                <UserCog size={16} /> Editar perfil
+                <UserCog size={16} aria-hidden="true" /> Perfil y mis datos
               </button>
+              <a
+                href="#/legal/privacidad"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              >
+                <ShieldCheck size={16} aria-hidden="true" /> Privacidad y términos
+              </a>
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
               >
                 <LogOut size={16} /> Cerrar sesión
               </button>

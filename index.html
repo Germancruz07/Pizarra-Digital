@@ -3,24 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#6366f1" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="description" content="Pizarra digital gratuita para clases en línea. Tus pizarras se guardan solo en tu navegador." />
+    <meta name="referrer" content="no-referrer" />
     <title>Pizarra Digital</title>
-    <script>
-      // Aplica el tema antes de pintar para evitar el destello claro en modo oscuro.
-      (function () {
-        try {
-          var p = localStorage.getItem('pd:theme') || 'system';
-          var dark = p === 'dark' || (p === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (dark) document.documentElement.classList.add('dark');
-        } catch (e) {}
-      })();
-    </script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%236366f1'/><path d='M18 44 L40 22 L46 28 L24 50 L16 52 Z' fill='white'/></svg>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%234f46e5'/><path d='M18 44 L40 22 L46 28 L24 50 L16 52 Z' fill='white'/></svg>" />
+    <script src="./theme-init.js"></script>
   </head>
   <body>
+    <noscript>Pizarra Digital necesita JavaScript activado para funcionar.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
