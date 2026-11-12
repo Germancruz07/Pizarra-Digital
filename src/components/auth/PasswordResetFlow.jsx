@@ -135,8 +135,8 @@ export default function PasswordResetFlow({ presetEmail = '', onDone, onCancel }
     return (
       <form onSubmit={send} className="space-y-4" noValidate>
         <p className="text-sm leading-relaxed text-slate-700">
-          Te enviaremos un correo con un <strong>código de 6 dígitos</strong> y un <strong>enlace</strong>. Usa cualquiera de
-          los dos para elegir una contraseña nueva.
+          Te enviaremos un correo con un <strong>enlace</strong> para elegir una contraseña nueva. Si el correo incluye
+          también un código de 6 dígitos, puedes escribirlo aquí en su lugar.
         </p>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Correo de tu cuenta</span>
@@ -176,11 +176,13 @@ export default function PasswordResetFlow({ presetEmail = '', onDone, onCancel }
   return (
     <form onSubmit={confirmChange} className="space-y-4" noValidate>
       <p className="text-sm leading-relaxed text-slate-700" role="status">
-        Si existe una cuenta con <strong>{email}</strong>, te hemos enviado un correo. Escribe el código o abre el enlace
-        del correo. Si no lo ves, revisa la carpeta de spam.
+        Si existe una cuenta con <strong>{email}</strong>, te hemos enviado un correo. <strong>Abre el enlace del
+        correo</strong> (en este u otro dispositivo) y podrás elegir tu nueva contraseña. Si no lo ves, revisa la carpeta
+        de spam.
       </p>
+      <p className="text-sm text-slate-600">¿El correo trae un código de 6 dígitos? Entonces también puedes usarlo aquí:</p>
       <label className="block">
-        <span className="mb-1.5 block text-sm font-medium text-slate-700">Código del correo</span>
+        <span className="mb-1.5 block text-sm font-medium text-slate-700">Código del correo (opcional)</span>
         <div className="relative">
           <KeyRound size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" />
           <input

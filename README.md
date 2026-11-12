@@ -110,8 +110,9 @@ cuentas con correo, pizarras e imágenes sincronizadas entre dispositivos y camb
 3. **Authentication → URL Configuration**:
    - *Site URL*: `https://germancruz07.github.io/Pizarra-Digital/`
    - *Redirect URLs*: añade esa misma dirección y `http://localhost:5173/`
-4. **Authentication → Emails → Reset password**: pega [`supabase/email-reset-password.html`](supabase/email-reset-password.html)
-   (incluye el código `{{ .Token }}` y el enlace).
+4. *(Opcional, requiere SMTP propio, ver paso 5)* **Authentication → Emails → Reset password** → pestaña **Source**:
+   pega [`supabase/email-reset-password.html`](supabase/email-reset-password.html) y guarda. Añade al correo un código de
+   6 dígitos además del enlace. Sin este paso el correo solo trae el enlace, y la app funciona igual.
 5. **Correo**: el servicio de correo integrado de Supabase es solo para pruebas (envía a pocas direcciones y con un límite muy bajo).
    Para usuarios reales configura un SMTP en **Authentication → Emails → SMTP Settings** (por ejemplo Resend o Brevo, que tienen plan gratuito).
 6. **Project Settings → API Keys**: copia la *Project URL* y la **clave publicable** (`sb_publishable_…` o la antigua `anon`).

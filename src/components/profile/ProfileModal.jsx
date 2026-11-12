@@ -127,7 +127,7 @@ export default function ProfileModal({ open, onClose }) {
               Seguridad
             </h3>
             <p className="text-sm leading-relaxed text-slate-600">
-              Para cambiar tu contraseña te enviaremos a {user.email} un correo con un código y un enlace.
+              Para cambiar tu contraseña te enviaremos a {user.email} un correo con un enlace seguro.
             </p>
             <button type="button" className="btn-ghost w-full sm:w-auto" onClick={() => setChangingPassword(true)}>
               <KeyRound size={16} aria-hidden="true" /> Cambiar contraseña
