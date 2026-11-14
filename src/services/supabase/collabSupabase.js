@@ -148,8 +148,8 @@ export const supabaseCollabAdapter = {
   },
 
   /**
-   * Canal privado de la pizarra: difusión de cambios (ops), metadatos (nombre/fondo) y presencia.
-   * Devuelve { sendOps, sendMeta, close }.
+   * Canal privado de la pizarra: difusión de cambios (ops), trazos en curso (draft),
+   * metadatos (nombre/fondo) y presencia. Devuelve { sendOps, sendDraft, sendMeta, close }.
    */
   openBoardChannel(boardId, handlers) {
     // El nombre del canal debe ser exactamente "board:<id>" (lo valida RLS en realtime.messages).
@@ -174,6 +174,7 @@ export const supabaseCollabAdapter = {
       channel
         .on('broadcast', { event: 'ops' }, ({ payload }) => current.handlers.onOps?.(payload))
         .on('broadcast', { event: 'meta' }, ({ payload }) => current.handlers.onMeta?.(payload))
+        .on('broadcast', { event: 'draft' }, ({ payload }) => current.handlers.onDraft?.(payload))
         .on('presence', { event: 'sync' }, () => current.handlers.onPresence?.(new Set(Object.keys(channel.presenceState()))))
         .subscribe(async (status) => {
           current.subscribed = status === 'SUBSCRIBED';
@@ -189,6 +190,8 @@ export const supabaseCollabAdapter = {
     return {
       sendOps: (payload) => own.channel.send({ type: 'broadcast', event: 'ops', payload }),
       sendMeta: (payload) => own.channel.send({ type: 'broadcast', event: 'meta', payload }),
+      // Trazo en curso (no se guarda): se envía varias veces por segundo mientras se dibuja.
+      sendDraft: (payload) => own.channel.send({ type: 'broadcast', event: 'draft', payload }),
       close: () => {
         if (closed) return;
         closed = true;

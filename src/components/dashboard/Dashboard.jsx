@@ -13,6 +13,7 @@ import { ConfirmDialog, PromptDialog } from '../ui/Dialogs';
 import { pluralize } from '../../utils/format';
 import SiteFooter from '../legal/SiteFooter';
 import JoinBoardModal from '../collab/JoinBoardModal';
+import PastClasses from './PastClasses';
 import { collabService } from '../../services';
 
 const SORTS = [
@@ -244,6 +245,8 @@ export default function Dashboard({ onOpenBoard }) {
             <p className="text-sm">Prueba con otro nombre.</p>
           </motion.div>
         )}
+
+        <PastClasses user={user} boards={boards} boardsLoading={loading} query={query} onOpenBoard={onOpenBoard} />
       </main>
 
       <NewBoardModal open={creating} onClose={() => setCreating(false)} onCreate={handleCreate} />

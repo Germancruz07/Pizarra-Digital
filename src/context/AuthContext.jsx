@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { authService, boardService, isCloud } from '../services';
+import { authService, boardService, historyService, isCloud } from '../services';
 import { PRIVACY_VERSION, TERMS_VERSION } from '../legal/config';
 
 const AuthContext = createContext(null);
@@ -134,6 +134,7 @@ export function AuthProvider({ children }) {
   /** Elimina la cuenta y todos sus datos (pizarras, imágenes y perfil). */
   const deleteAccount = useCallback(async () => {
     await boardService.deleteAllForOwner(user.id);
+    await historyService.clear(user.id).catch(() => {});
     await authService.deleteAccount(user.id);
     setUser(null);
   }, [user]);

@@ -1,8 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collabService } from '../services';
 import { applyOps, diffElements, emptyPending, isEmptyOps, mergePending, pendingToOps } from '../collab/elementSync';
+import { moveElement } from '../canvas/elements';
 
 const FLUSH_DELAY = 350;
+const DRAFT_STALE = 3000; // un trazo remoto sin novedades se descarta (p. ej. se cortó la conexión)
+const DRAFT_LINGER = 400; // al soltar, el trazo remoto espera a que llegue el elemento definitivo
+const NO_DRAFTS = [];
+
+/**
+ * Dibujo en vivo: intervalo entre envíos según cuántas personas hay conectadas.
+ * Con pocas personas ~25 envíos/s (fluido); con clases grandes se espacia para no
+ * superar la cuota de mensajes de Supabase Realtime (cada envío llega a todos).
+ */
+const LIVE_MIN_INTERVAL = 40;
+const LIVE_MAX_INTERVAL = 120;
+const liveInterval = (online) => Math.min(LIVE_MAX_INTERVAL, Math.max(LIVE_MIN_INTERVAL, (online - 1) * 12));
+
+/** Trazos a mano alzada: sus puntos solo crecen, así que se envían por tramos (solo los puntos nuevos). */
+const APPENDABLE = new Set(['freedraw', 'erase']);
+/** Cada cuántos envíos se manda el trazo completo (para quien entra a mitad de un trazo). */
+const FULL_EVERY = 25;
+/** Por encima de este total de puntos, mover/redimensionar no se previsualiza en vivo (solo el resultado final). */
+const LIVE_MAX_POINTS = 4000;
+
+const round1 = (v) => Math.round(v * 10) / 10;
+const compactPoints = (points) => points.map(([x, y]) => [round1(x), round1(y)]);
+
+/** Copia ligera del trazo para enviarlo (coordenadas con un decimal). */
+const compactDraft = (el) => (el.points ? { ...el, points: compactPoints(el.points) } : { ...el });
 
 /**
  * Sesión colaborativa de una pizarra (solo modo nube).
@@ -25,6 +51,8 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
   const [members, setMembers] = useState([]);
   const [online, setOnline] = useState(() => new Set());
   const [connected, setConnected] = useState(false);
+  const [drafts, setDrafts] = useState(() => new Map()); // remitente → { el, t }
+  const [lives, setLives] = useState(() => new Map()); // remitente → { live, t } (mover/redimensionar en curso)
 
   const active = enabled && ready && ((isOwner && !!share) || isGuest);
 
@@ -34,9 +62,11 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
   const canUpload = !isGuest || (me?.status === 'approved' && me.canUpload);
 
   const latest = useRef({});
-  latest.current = { elements, members, canWrite, user, access, onRemoteMeta, onKicked, toast, applyExternal };
+  latest.current = { elements, members, canWrite, user, access, onRemoteMeta, onKicked, toast, applyExternal, onlineCount: online.size };
 
   const channelRef = useRef(null);
+  const draftOut = useRef({ el: null, timer: null, last: 0, sent: false, id: null, count: 0, n: 0 }); // trazo propio en curso
+  const liveOut = useRef({ live: null, timer: null, last: 0, sent: false }); // transformación propia en curso
   const baseRef = useRef(elements); // último estado sincronizado (local + remoto)
   const pendingRef = useRef(emptyPending());
   const timerRef = useRef(null);
@@ -134,21 +164,100 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
     baseRef.current = latest.current.elements;
     let resynced = false;
 
-    const receive = (payload) => {
+    // Solo se aceptan cambios del profesor o de estudiantes con permiso de escritura.
+    const isAllowed = (from) => {
       const { user: self, access: acc, members: list } = latest.current;
-      if (!payload || payload.from === self.id) return;
-      // Solo se aceptan cambios del profesor o de estudiantes con permiso de escritura.
-      const allowed = payload.from === acc.ownerId || list.some((m) => m.userId === payload.from && m.status === 'approved' && m.canWrite);
-      if (!allowed) return;
+      if (!from || from === self.id) return false;
+      return from === acc.ownerId || list.some((m) => m.userId === from && m.status === 'approved' && m.canWrite);
+    };
+
+    const dropDraft = (from, onlyIfOlderThan) =>
+      setDrafts((map) => {
+        const cur = map.get(from);
+        if (!cur || (onlyIfOlderThan !== undefined && cur.t > onlyIfOlderThan)) return map;
+        const next = new Map(map);
+        next.delete(from);
+        return next;
+      });
+
+    const dropLive = (from, onlyIfOlderThan) =>
+      setLives((map) => {
+        const cur = map.get(from);
+        if (!cur || (onlyIfOlderThan !== undefined && cur.t > onlyIfOlderThan)) return map;
+        const next = new Map(map);
+        next.delete(from);
+        return next;
+      });
+
+    const receive = (payload) => {
+      if (!payload || !isAllowed(payload.from)) return;
       const ops = { upserts: payload.upserts || [], deletes: payload.deletes || [], order: payload.order || null };
       baseRef.current = applyOps(baseRef.current, ops);
       latest.current.applyExternal((els) => applyOps(els, ops));
+      dropDraft(payload.from); // llegó el elemento definitivo: el trazo provisional sobra
+      dropLive(payload.from); // y la vista previa del arrastre también
     };
+
+    // Mover/redimensionar en curso de otra persona: { move: { ids, dx, dy } } | { elements } | null.
+    const receiveLive = (from, live) => {
+      if (!live) {
+        const stamp = Date.now();
+        setTimeout(() => dropLive(from, stamp), DRAFT_LINGER);
+        return;
+      }
+      const m = live.move;
+      const validMove = m && Array.isArray(m.ids) && m.ids.length <= 5000 && Number.isFinite(m.dx) && Number.isFinite(m.dy);
+      const validEls = Array.isArray(live.elements) && live.elements.length <= 5000;
+      if (!validMove && !validEls) return;
+      setLives((map) => new Map(map).set(from, { live, t: Date.now() }));
+    };
+
+    // Tramo nuevo de un trazo en curso: se añade a lo ya recibido si encaja; si no, se espera al siguiente envío completo.
+    const receiveDelta = (from, delta) => {
+      if (!delta || typeof delta.id !== 'string' || !Array.isArray(delta.points) || !Number.isInteger(delta.start)) return;
+      setDrafts((map) => {
+        const cur = map.get(from);
+        const pts = cur?.el?.points;
+        if (!cur || cur.el.id !== delta.id || !pts || delta.start < 0 || delta.start > pts.length) return map;
+        const el = { ...cur.el, points: pts.slice(0, delta.start).concat(delta.points) };
+        return new Map(map).set(from, { el, t: Date.now() });
+      });
+    };
+
+    // Trazo en curso de otra persona: solo se dibuja, nunca entra en el historial ni se guarda.
+    const receiveDraft = (payload) => {
+      if (!payload || !isAllowed(payload.from)) return;
+      if ('live' in payload) {
+        receiveLive(payload.from, payload.live);
+        return;
+      }
+      if (payload.delta) {
+        receiveDelta(payload.from, payload.delta);
+        return;
+      }
+      if (!payload.draft) {
+        const stamp = Date.now();
+        setTimeout(() => dropDraft(payload.from, stamp), DRAFT_LINGER);
+        return;
+      }
+      setDrafts((map) => new Map(map).set(payload.from, { el: payload.draft, t: Date.now() }));
+    };
+
+    const sweep = setInterval(() => {
+      const limit = Date.now() - DRAFT_STALE;
+      const prune = (map) => {
+        if (![...map.values()].some((d) => d.t < limit)) return map;
+        return new Map([...map].filter(([, d]) => d.t >= limit));
+      };
+      setDrafts(prune);
+      setLives(prune);
+    }, 1000);
 
     const channel = collabService.openBoardChannel(boardId, {
       user: latest.current.user,
       role: isOwner ? 'owner' : 'guest',
       onOps: receive,
+      onDraft: receiveDraft,
       onMeta: (meta) => isGuest && latest.current.onRemoteMeta?.(meta),
       onPresence: setOnline,
       onStatus: async (status) => {
@@ -172,10 +281,17 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
 
     return () => {
       flush();
+      clearInterval(sweep);
+      clearTimeout(draftOut.current.timer);
+      draftOut.current = { el: null, timer: null, last: 0, sent: false, id: null, count: 0, n: 0 };
+      clearTimeout(liveOut.current.timer);
+      liveOut.current = { live: null, timer: null, last: 0, sent: false };
       channel.close();
       channelRef.current = null;
       setConnected(false);
       setOnline(new Set());
+      setDrafts(new Map());
+      setLives(new Map());
     };
   }, [active, boardId, isOwner, isGuest, flush]);
 
@@ -199,6 +315,109 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
     const t = setTimeout(() => channelRef.current?.sendMeta({ name, background }), 250);
     return () => clearTimeout(t);
   }, [active, isOwner, connected, name, background, online.size]);
+
+  /**
+   * Trazo propio en curso → los demás lo ven mientras se dibuja (pointermove), sin esperar a soltar.
+   * Envíos limitados (liveInterval, siempre con la versión más reciente) y solo si hay alguien más
+   * conectado. En trazos a mano alzada solo viajan los puntos nuevos desde el último envío; cada
+   * FULL_EVERY envíos se manda el trazo completo para quien se conecte a mitad.
+   * `null` = se soltó o se canceló el trazo (el elemento definitivo llega después como op).
+   */
+  const sendDraft = useCallback(
+    (el) => {
+      const out = draftOut.current;
+      if (!el) {
+        clearTimeout(out.timer);
+        out.timer = null;
+        out.el = null;
+        if (out.sent) channelRef.current?.sendDraft({ from: user.id, draft: null });
+        out.sent = false;
+        out.id = null;
+        out.count = 0;
+        out.n = 0;
+        return;
+      }
+      if (!channelRef.current || !latest.current.canWrite || latest.current.onlineCount < 2) return;
+      out.el = el;
+      if (out.timer) return;
+      out.timer = setTimeout(() => {
+        out.timer = null;
+        const cur = out.el;
+        const channel = channelRef.current;
+        if (!cur || !channel || !latest.current.canWrite) return;
+        const pts = cur.points;
+        const canAppend = APPENDABLE.has(cur.type) && pts && cur.id === out.id && pts.length >= out.count && out.n < FULL_EVERY;
+        if (canAppend) {
+          if (pts.length === out.count) return; // nada nuevo que enviar
+          channel.sendDraft({ from: user.id, delta: { id: cur.id, start: out.count, points: compactPoints(pts.slice(out.count)) } });
+          out.n += 1;
+        } else {
+          channel.sendDraft({ from: user.id, draft: compactDraft(cur) });
+          out.n = 1;
+        }
+        out.id = cur.id;
+        out.count = pts ? pts.length : 0;
+        out.last = Date.now();
+        out.sent = true;
+      }, Math.max(0, liveInterval(latest.current.onlineCount) - (Date.now() - out.last)));
+    },
+    [user.id]
+  );
+
+  /**
+   * Mover / redimensionar / editar puntos en curso → vista previa en vivo para los demás.
+   * live = { move: { ids, dx, dy } } (muy ligero) | { elements } | null (se soltó o canceló).
+   */
+  const sendLive = useCallback(
+    (live) => {
+      const out = liveOut.current;
+      if (!live) {
+        clearTimeout(out.timer);
+        out.timer = null;
+        out.live = null;
+        if (out.sent) channelRef.current?.sendDraft({ from: user.id, live: null });
+        out.sent = false;
+        return;
+      }
+      if (!channelRef.current || !latest.current.canWrite || latest.current.onlineCount < 2) return;
+      if (live.elements && live.elements.reduce((n, el) => n + (el.points?.length || 0), 0) > LIVE_MAX_POINTS) return;
+      out.live = live;
+      if (out.timer) return;
+      out.timer = setTimeout(() => {
+        out.timer = null;
+        const cur = out.live;
+        if (!cur || !channelRef.current || !latest.current.canWrite) return;
+        const payload = cur.move
+          ? { move: { ids: cur.move.ids, dx: round1(cur.move.dx), dy: round1(cur.move.dy) } }
+          : { elements: cur.elements.map(compactDraft) };
+        channelRef.current.sendDraft({ from: user.id, live: payload });
+        out.last = Date.now();
+        out.sent = true;
+      }, Math.max(0, liveInterval(latest.current.onlineCount) - (Date.now() - out.last)));
+    },
+    [user.id]
+  );
+
+  const remoteDrafts = useMemo(() => (drafts.size ? [...drafts.values()].map((d) => d.el) : NO_DRAFTS), [drafts]);
+
+  /** Elementos que otra persona está moviendo/redimensionando ahora mismo: id → versión provisional. */
+  const remoteLive = useMemo(() => {
+    if (!lives.size) return null;
+    const byId = new Map(elements.map((el) => [el.id, el]));
+    const out = new Map();
+    for (const { live } of lives.values()) {
+      if (live.move) {
+        const { ids, dx, dy } = live.move;
+        for (const id of ids) {
+          const el = byId.get(id);
+          if (el) out.set(id, moveElement(el, dx, dy));
+        }
+      } else {
+        for (const el of live.elements) if (el && byId.has(el.id)) out.set(el.id, el);
+      }
+    }
+    return out.size ? out : null;
+  }, [lives, elements]);
 
   /* ------------------------------------------------ acciones del profesor */
 
@@ -264,6 +483,10 @@ export function useBoardCollab({ boardId, user, access, ready, elements, applyEx
     approved: members.filter((m) => m.status === 'approved'),
     online,
     flush,
+    sendDraft,
+    remoteDrafts,
+    sendLive,
+    remoteLive,
     ...actions,
   };
 }

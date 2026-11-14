@@ -53,6 +53,12 @@ export default function WhiteboardCanvas({
   onTextRequest,
   onDropImages,
   onResize,
+  // Pizarras compartidas (opcionales): trazo propio en curso y trazos en curso de otras personas.
+  onDraftChange,
+  remoteDrafts,
+  // Vista previa en vivo de mover/redimensionar: la propia (salida) y la de otras personas (id → elemento).
+  onLiveChange,
+  remoteLive,
   children,
 }) {
   const containerRef = useRef(null);
@@ -84,9 +90,11 @@ export default function WhiteboardCanvas({
     selectedSet: new Set(selectedIds),
     editingId,
     isEditingText,
+    remoteDrafts,
+    remoteLive,
   };
   const callbacks = useRef({});
-  callbacks.current = { onResize, onFinishTextEdit, onTextRequest, onDropImages };
+  callbacks.current = { onResize, onFinishTextEdit, onTextRequest, onDropImages, onDraftChange, onLiveChange };
 
   /* ------------------------------------------------------------ render */
 
@@ -110,9 +118,15 @@ export default function WhiteboardCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr * vp.zoom, 0, 0, dpr * vp.zoom, dpr * vp.x, dpr * vp.y);
 
-    const els = liveRef.current || props.current.elements;
-    const view = { x: -vp.x / vp.zoom, y: -vp.y / vp.zoom, width: w / vp.zoom, height: h / vp.zoom };
+    let els = liveRef.current || props.current.elements;
     const it = interactionRef.current;
+    // Lo que otra persona está arrastrando ahora mismo (salvo lo que este usuario arrastra a la vez).
+    const remoteLiveMap = props.current.remoteLive;
+    if (remoteLiveMap?.size) {
+      const mine = it?.snapshot || (it?.base ? new Set([it.base.id]) : null);
+      els = els.map((el) => (mine?.has(el.id) ? el : remoteLiveMap.get(el.id) || el));
+    }
+    const view = { x: -vp.x / vp.zoom, y: -vp.y / vp.zoom, width: w / vp.zoom, height: h / vp.zoom };
     const fading = it?.type === 'erase-object' ? it.toDelete : null;
 
     for (const el of els) {
@@ -121,6 +135,7 @@ export default function WhiteboardCanvas({
       if (!rectsIntersect(vb, view)) continue;
       drawElement(ctx, el, { getImage, alpha: fading?.has(el.id) ? 0.2 : 1 });
     }
+    if (props.current.remoteDrafts) for (const d of props.current.remoteDrafts) drawElement(ctx, d, { getImage });
     if (draftRef.current) drawElement(ctx, draftRef.current, { getImage });
 
     // --- Superposición en coordenadas de pantalla
@@ -393,7 +408,9 @@ export default function WhiteboardCanvas({
 
   const cancelInteraction = () => {
     interactionRef.current = null;
+    if (draftRef.current) callbacks.current.onDraftChange?.(null);
     draftRef.current = null;
+    if (liveRef.current) callbacks.current.onLiveChange?.(null);
     liveRef.current = null;
   };
 
@@ -635,6 +652,7 @@ export default function WhiteboardCanvas({
         liveRef.current = props.current.elements.map((el) =>
           it.snapshot.has(el.id) ? moveElement(it.snapshot.get(el.id), dx, dy) : el
         );
+        callbacks.current.onLiveChange?.({ move: { ids: [...it.snapshot.keys()], dx, dy } });
         break;
       }
 
@@ -643,6 +661,9 @@ export default function WhiteboardCanvas({
         liveRef.current = props.current.elements.map((el) =>
           it.snapshot.has(el.id) ? transformElement(it.snapshot.get(el.id), it.bounds, nb) : el
         );
+        if (callbacks.current.onLiveChange) {
+          callbacks.current.onLiveChange({ elements: liveRef.current.filter((el) => it.snapshot.has(el.id)) });
+        }
         break;
       }
 
@@ -652,6 +673,7 @@ export default function WhiteboardCanvas({
         const [x, y] = e.shiftKey ? snapAngle(other[0], other[1], world.x, world.y) : [world.x, world.y];
         const points = base.points.map((p, i) => (i === it.index ? [x, y] : p));
         liveRef.current = props.current.elements.map((el) => (el.id === base.id ? { ...base, points } : el));
+        callbacks.current.onLiveChange?.({ elements: [{ ...base, points }] });
         break;
       }
 
@@ -673,6 +695,7 @@ export default function WhiteboardCanvas({
       default:
         break;
     }
+    if (draftRef.current) callbacks.current.onDraftChange?.(draftRef.current);
     requestRender();
   };
 
@@ -694,6 +717,7 @@ export default function WhiteboardCanvas({
       case 'draw': {
         const d = draftRef.current;
         draftRef.current = null;
+        if (d) callbacks.current.onDraftChange?.(null);
         if (d) {
           if (it.raw) d.points.push([it.raw.x, it.raw.y]);
           commit((els) => [...els, { ...d }]);
@@ -704,6 +728,7 @@ export default function WhiteboardCanvas({
         const d = draftRef.current;
         draftRef.current = null;
         if (!d) break;
+        callbacks.current.onDraftChange?.(null);
         const size = d.points
           ? Math.hypot(d.points[1][0] - d.points[0][0], d.points[1][1] - d.points[0][1])
           : Math.max(d.width, d.height);
@@ -719,6 +744,7 @@ export default function WhiteboardCanvas({
       case 'move':
       case 'resize':
       case 'point':
+        if (liveRef.current) callbacks.current.onLiveChange?.(null);
         if (liveRef.current) {
           // Solo se confirman los elementos que se arrastraron (el resto, tal como esté ahora):
           // mismo resultado de siempre, pero sin pisar cambios que lleguen en vivo durante el arrastre.

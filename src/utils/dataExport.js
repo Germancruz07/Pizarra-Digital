@@ -1,4 +1,4 @@
-import { assetService, authService, boardService } from '../services';
+import { assetService, authService, boardService, historyService } from '../services';
 import { downloadBlob } from './image';
 
 function blobToDataUrl(blob) {
@@ -20,6 +20,8 @@ export async function downloadUserData(userId) {
     boardService.exportBoards(userId),
     assetService.listImages(userId),
   ]);
+  // "Clases pasadas" (si en modo nube aún no se ejecutó history.sql, se omite).
+  const history = await historyService.list(userId).catch(() => []);
 
   const exportedImages = [];
   for (const img of images) {
@@ -43,6 +45,7 @@ export async function downloadUserData(userId) {
     consentimientoDeCookiesEnEsteDispositivo: deviceConsent,
     pizarras: boards,
     imagenes: exportedImages,
+    clasesPasadas: history,
   };
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });

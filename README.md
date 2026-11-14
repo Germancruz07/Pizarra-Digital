@@ -143,6 +143,24 @@ y cada cambio se guarda por elemento con la función `apply_board_ops`, que vali
 de la clase se guardan en la carpeta del profesor, y solo pueden subirlas los estudiantes con permiso. Las pizarras
 que no se comparten siguen funcionando exactamente igual que antes.
 
+### Clases pasadas (historial de pizarras)
+
+En *Mis pizarras* hay un apartado **Clases pasadas** con todas las pizarras que el usuario creó o a las que se unió
+con código (una vez aprobado), con su nombre, el profesor/creador, la fecha de creación y el último acceso. Se puede
+ordenar por fecha (más recientes / más antiguas) o por nombre (A–Z / Z–A), y al hacer clic se abre la pizarra.
+
+- **Modo local:** funciona sin configuración (se guarda en el navegador, por usuario).
+- **Modo nube:** **SQL Editor** → pega [`supabase/history.sql`](supabase/history.sql) → **Run** (después de `schema.sql`
+  y `collab.sql`). Solo añade la tabla `board_history` y dos funciones; no cambia nada de lo anterior. Mientras no se
+  ejecute, el apartado muestra solo las pizarras propias.
+
+### Dibujo en vivo
+
+En pizarras compartidas, los trazos se ven mientras se dibujan (no al soltar): los trazos a mano alzada envían solo los
+puntos nuevos (con un envío completo periódico para quien entra a mitad de un trazo), y mover/redimensionar también se
+previsualiza en vivo. La frecuencia se adapta al número de conectados (de ~25 envíos/s a ~8 envíos/s en clases grandes)
+para no agotar la cuota de mensajes de Supabase Realtime. Solo emiten quienes tienen permiso de escritura.
+
 ## Claves de API
 
 En modo local la app **no usa ninguna clave de API**. En modo nube solo usa la clave **publicable** de Supabase. Si conectas otro servicio:

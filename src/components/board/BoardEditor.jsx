@@ -4,7 +4,7 @@ import { ArrowLeft, FileQuestion, ImageUp, Shapes, Sparkles, Users } from 'lucid
 import { FullScreenLoader } from '../ui/Loader';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { assetService, boardService, collabService } from '../../services';
+import { assetService, boardService, collabService, historyService } from '../../services';
 import { useHistory } from '../../hooks/useHistory';
 import { useBoardCollab } from '../../hooks/useBoardCollab';
 import WhiteboardCanvas from './WhiteboardCanvas';
@@ -156,6 +156,16 @@ export default function BoardEditor({ boardId, onExit }) {
           return;
         }
         setAccess(nextAccess);
+        // "Clases pasadas": queda vinculada al perfil (alta o último acceso). Nunca bloquea la apertura.
+        historyService
+          .touch(user, {
+            boardId,
+            boardName: board.name,
+            teacherName: nextAccess.role === 'owner' ? user.name : undefined,
+            role: nextAccess.role,
+            createdAt: board.createdAt,
+          })
+          .catch(() => {});
         const els = board.elements || [];
         reset(els);
         setName(board.name);
@@ -805,6 +815,10 @@ export default function BoardEditor({ boardId, onExit }) {
         onTextRequest={handleTextRequest}
         onDropImages={addImages}
         onResize={handleResize}
+        onDraftChange={collab.active ? collab.sendDraft : undefined}
+        remoteDrafts={collab.remoteDrafts}
+        onLiveChange={collab.active ? collab.sendLive : undefined}
+        remoteLive={collab.remoteLive}
       >
         {textEdit && (
           <TextEditorOverlay

@@ -43,6 +43,8 @@ import { supabaseAuthAdapter } from './supabase/authSupabase';
 import { supabaseBoardAdapter } from './supabase/boardSupabase';
 import { supabaseAssetAdapter } from './supabase/assetSupabase';
 import { supabaseCollabAdapter } from './supabase/collabSupabase';
+import { localHistoryAdapter } from './local/historyLocal';
+import { supabaseHistoryAdapter } from './supabase/historySupabase';
 
 /**
  * Modo nube (Supabase) si existen VITE_SUPABASE_URL y la clave publicable; si no, modo local.
@@ -62,3 +64,13 @@ export const assetService = isCloud ? supabaseAssetAdapter : localAssetAdapter;
  * Ver src/services/supabase/collabSupabase.js y supabase/collab.sql.
  */
 export const collabService = isCloud ? supabaseCollabAdapter : null;
+
+/**
+ * HistoryService ("Clases pasadas"): pizarras que el usuario creó o a las que se unió.
+ *     touch(user, { boardId, boardName?, teacherName?, role?, createdAt? }) -> void  (alta o último acceso)
+ *     list(userId)                                -> HistoryEntry[]
+ *     remove(userId, boardId)                     -> void
+ *     clear(userId)                               -> void   (al eliminar la cuenta)
+ * En modo nube requiere supabase/history.sql; si falta, la UI muestra solo las pizarras propias.
+ */
+export const historyService = isCloud ? supabaseHistoryAdapter : localHistoryAdapter;
