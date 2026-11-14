@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutGrid, PenLine, Plus, Search, SearchX, X } from 'lucide-react';
+import { KeyRound, LayoutGrid, PenLine, Plus, Search, SearchX, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { boardService } from '../../services';
@@ -12,6 +12,8 @@ import NewBoardModal from './NewBoardModal';
 import { ConfirmDialog, PromptDialog } from '../ui/Dialogs';
 import { pluralize } from '../../utils/format';
 import SiteFooter from '../legal/SiteFooter';
+import JoinBoardModal from '../collab/JoinBoardModal';
+import { collabService } from '../../services';
 
 const SORTS = [
   ['recent', 'Recientes'],
@@ -26,6 +28,7 @@ export default function Dashboard({ onOpenBoard }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('recent');
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [renaming, setRenaming] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
@@ -153,10 +156,18 @@ export default function Dashboard({ onOpenBoard }) {
               {loading ? 'Cargando tus pizarras…' : `Tienes ${pluralize(boards.length, 'pizarra guardada', 'pizarras guardadas')} ${isCloud ? 'en tu cuenta' : 'en este navegador'}.`}
             </p>
           </div>
-          <button className="btn-primary self-start sm:self-auto" onClick={() => setCreating(true)}>
-            <Plus size={18} /> Nueva pizarra
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {collabService && (
+              <button className="btn-ghost" onClick={() => setJoining(true)}>
+                <KeyRound size={18} /> Unirse con código
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => setCreating(true)}>
+              <Plus size={18} /> Nueva pizarra
+            </button>
+          </div>
         </motion.div>
+        {collabService && <JoinBoardModal open={joining} onClose={() => setJoining(false)} onOpenBoard={onOpenBoard} />}
 
         <div className="mt-8 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-600">

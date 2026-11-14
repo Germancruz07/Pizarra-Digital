@@ -51,6 +51,22 @@ export function useHistory(initial = [], limit = 150) {
     rerender();
   }, []);
 
+  /**
+   * Cambios que llegan de otra persona (pizarra compartida): se aplican al estado actual y a
+   * todo el historial, sin crear un paso de deshacer. Así Ctrl+Z solo deshace lo propio y
+   * nunca borra lo que dibujó otro.
+   */
+  const applyExternal = useCallback((fn) => {
+    const s = ref.current;
+    const present = fn(s.present);
+    const past = s.past.map(fn);
+    const future = s.future.map(fn);
+    const same = present === s.present && past.every((p, i) => p === s.past[i]) && future.every((f, i) => f === s.future[i]);
+    if (same) return;
+    ref.current = { past, present, future };
+    rerender();
+  }, []);
+
   const s = ref.current;
   return {
     present: s.present,
@@ -58,6 +74,7 @@ export function useHistory(initial = [], limit = 150) {
     undo,
     redo,
     reset,
+    applyExternal,
     canUndo: s.past.length > 0,
     canRedo: s.future.length > 0,
   };

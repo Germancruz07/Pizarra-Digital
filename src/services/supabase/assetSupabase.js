@@ -4,6 +4,12 @@ import { uid } from '../../utils/id';
 const BUCKET = 'images';
 const path = (ownerId, id) => `${ownerId}/${id}`;
 
+// Pizarra compartida abierta como estudiante: sus imágenes están en la carpeta del profesor.
+let sharedImageOwner = null;
+export function setSharedImageOwner(ownerId) {
+  sharedImageOwner = ownerId || null;
+}
+
 async function listIds(ownerId) {
   const ids = [];
   for (let offset = 0; ; offset += 1000) {
@@ -33,7 +39,7 @@ export const supabaseAssetAdapter = {
   },
 
   async getImageBlob(id) {
-    const ownerId = await currentUserId();
+    const ownerId = sharedImageOwner || (await currentUserId());
     const { data, error } = await supabase.storage.from(BUCKET).download(path(ownerId, id));
     if (error) return null;
     return data;

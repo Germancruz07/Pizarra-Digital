@@ -124,6 +124,25 @@ cuentas con correo, pizarras e imágenes sincronizadas entre dispositivos y camb
 Para pasar a la nube las pizarras que ya tenías en el navegador: en la versión local usa **Perfil → Descargar**,
 y después, ya con tu cuenta en la nube, **Perfil → Importar**.
 
+### Clases en vivo: estudiantes con código y permisos (solo modo nube)
+
+1. **SQL Editor** → pega [`supabase/collab.sql`](supabase/collab.sql) → **Run** (después de `schema.sql`). Añade los
+   códigos de acceso, los participantes con sus permisos, las reglas de seguridad y el tiempo real. No cambia nada de lo anterior.
+2. **Realtime → Settings**: comprueba que los canales privados están permitidos (la app usa canales privados
+   protegidos por las reglas de `collab.sql`).
+
+Uso:
+- **Profesor**: en su pizarra, botón **Compartir** (icono de personas) → *Generar código*. Ahí aprueba o rechaza
+  solicitudes y, para cada estudiante, activa o desactiva **Escribir / dibujar** y **Subir imágenes**. Los cambios se
+  aplican al instante. *Aceptar solicitudes nuevas* desactiva el código sin echar a nadie; el botón de recargar crea uno nuevo.
+- **Estudiante**: en *Mis pizarras*, **Unirse con código** → escribe el código → espera en la sala de espera hasta que
+  el profesor lo apruebe. Para volver más tarde basta con introducir el mismo código.
+
+Cómo funciona: las pizarras compartidas se sincronizan en vivo por un canal privado de Supabase Realtime (`board:<id>`),
+y cada cambio se guarda por elemento con la función `apply_board_ops`, que valida el permiso en el servidor. Las imágenes
+de la clase se guardan en la carpeta del profesor, y solo pueden subirlas los estudiantes con permiso. Las pizarras
+que no se comparten siguen funcionando exactamente igual que antes.
+
 ## Claves de API
 
 En modo local la app **no usa ninguna clave de API**. En modo nube solo usa la clave **publicable** de Supabase. Si conectas otro servicio:

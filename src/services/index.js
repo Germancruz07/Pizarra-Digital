@@ -42,6 +42,7 @@ import { isCloud } from './supabase/client';
 import { supabaseAuthAdapter } from './supabase/authSupabase';
 import { supabaseBoardAdapter } from './supabase/boardSupabase';
 import { supabaseAssetAdapter } from './supabase/assetSupabase';
+import { supabaseCollabAdapter } from './supabase/collabSupabase';
 
 /**
  * Modo nube (Supabase) si existen VITE_SUPABASE_URL y la clave publicable; si no, modo local.
@@ -54,3 +55,10 @@ export { isCloud };
 export const authService = isCloud ? supabaseAuthAdapter : localAuthAdapter;
 export const boardService = isCloud ? supabaseBoardAdapter : localBoardAdapter;
 export const assetService = isCloud ? supabaseAssetAdapter : localAssetAdapter;
+
+/**
+ * CollabService (solo modo nube; en modo local es null y la UI no muestra nada):
+ * código de acceso, solicitudes, permisos por estudiante y sesión en tiempo real.
+ * Ver src/services/supabase/collabSupabase.js y supabase/collab.sql.
+ */
+export const collabService = isCloud ? supabaseCollabAdapter : null;

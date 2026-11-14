@@ -719,7 +719,13 @@ export default function WhiteboardCanvas({
       case 'move':
       case 'resize':
       case 'point':
-        if (liveRef.current) commit(liveRef.current);
+        if (liveRef.current) {
+          // Solo se confirman los elementos que se arrastraron (el resto, tal como esté ahora):
+          // mismo resultado de siempre, pero sin pisar cambios que lleguen en vivo durante el arrastre.
+          const touched = it.snapshot || new Set([it.base.id]);
+          const live = new Map(liveRef.current.filter((el) => touched.has(el.id)).map((el) => [el.id, el]));
+          commit((els) => els.map((el) => live.get(el.id) || el));
+        }
         liveRef.current = null;
         break;
       default:

@@ -98,6 +98,10 @@ export default function EditorTopBar({
   exporting = false,
   onSave,
   beforeLogout,
+  // Pizarras compartidas (opcionales): `guest` oculta las acciones que solo puede hacer el profesor
+  // (renombrar, fondo, limpiar); `collabSlot` añade el botón de compartir/participantes.
+  guest = false,
+  collabSlot = null,
 }) {
   const { preference, cycleTheme } = useTheme();
 
@@ -116,6 +120,7 @@ export default function EditorTopBar({
           onChange={(e) => onNameChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
           onBlur={() => !name.trim() && onNameChange('Pizarra sin título')}
+          readOnly={guest}
           maxLength={80}
           spellCheck={false}
           aria-label="Nombre de la pizarra"
@@ -136,10 +141,14 @@ export default function EditorTopBar({
         {/* Escritorio y tablet horizontal: todas las acciones visibles */}
         <div className="hidden items-center gap-0.5 md:flex">
           <Divider />
-          <Dropdown label="Fondo" icon={Layers}>
-            {(close) => <BackgroundOptions value={background} onChange={onBackgroundChange} close={close} />}
-          </Dropdown>
-          <IconButton icon={Trash2} label="Limpiar pizarra" onClick={onClear} danger />
+          {!guest && (
+            <>
+              <Dropdown label="Fondo" icon={Layers}>
+                {(close) => <BackgroundOptions value={background} onChange={onBackgroundChange} close={close} />}
+              </Dropdown>
+              <IconButton icon={Trash2} label="Limpiar pizarra" onClick={onClear} danger />
+            </>
+          )}
           <IconButton
             icon={exporting ? Loader2 : Download}
             label={exporting ? 'Exportando…' : 'Exportar PNG'}
@@ -184,24 +193,36 @@ export default function EditorTopBar({
                 >
                   Exportar PNG
                 </MenuButton>
-                <MenuButton
-                  icon={Trash2}
-                  danger
-                  onClick={() => {
-                    onClear();
-                    close();
-                  }}
-                >
-                  Limpiar pizarra
-                </MenuButton>
+                {!guest && (
+                  <MenuButton
+                    icon={Trash2}
+                    danger
+                    onClick={() => {
+                      onClear();
+                      close();
+                    }}
+                  >
+                    Limpiar pizarra
+                  </MenuButton>
+                )}
                 <MenuButton onClick={cycleTheme}>{THEME_LABELS[preference]} (cambiar)</MenuButton>
-                <div className="my-1 h-px bg-slate-200" aria-hidden="true" />
-                <BackgroundOptions value={background} onChange={onBackgroundChange} close={close} />
+                {!guest && (
+                  <>
+                    <div className="my-1 h-px bg-slate-200" aria-hidden="true" />
+                    <BackgroundOptions value={background} onChange={onBackgroundChange} close={close} />
+                  </>
+                )}
               </>
             )}
           </Dropdown>
         </div>
 
+        {collabSlot && (
+          <>
+            <Divider />
+            {collabSlot}
+          </>
+        )}
         <Divider />
         <ProfileMenu compact beforeLogout={beforeLogout} />
       </motion.div>

@@ -33,7 +33,8 @@ export const TOOL_ITEMS = [
   { id: 'image', icon: ImagePlus, label: 'Imagen', key: 'I' },
 ];
 
-export default function Toolbar({ tool, onToolChange, onPickImage }) {
+/** `lockedTools` (opcional): ids de herramientas bloqueadas por el profesor en una pizarra compartida. */
+export default function Toolbar({ tool, onToolChange, onPickImage, lockedTools }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-3">
       <motion.div
@@ -49,16 +50,18 @@ export default function Toolbar({ tool, onToolChange, onPickImage }) {
           const active = tool === item.id;
           const Icon = item.icon;
           const isAction = item.id === 'image';
+          const locked = !!lockedTools?.has(item.id);
           return (
             <Fragment key={item.id}>
               <button
                 type="button"
                 onClick={() => (isAction ? onPickImage() : onToolChange(item.id))}
-                aria-label={isAction ? `Subir imagen (${item.key})` : `${item.label} (${item.key})`}
+                disabled={locked}
+                aria-label={`${isAction ? `Subir imagen (${item.key})` : `${item.label} (${item.key})`}${locked ? ', bloqueado por el profesor' : ''}`}
                 aria-pressed={isAction ? undefined : active}
                 aria-keyshortcuts={item.key}
-                title={`${item.label} — ${item.key}`}
-                className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 ${
+                title={locked ? `${item.label} — bloqueado por el profesor` : `${item.label} — ${item.key}`}
+                className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${
                   active ? 'text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >

@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, FileQuestion, ImageUp, Shapes, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileQuestion, ImageUp, Shapes, Sparkles, Users } from 'lucide-react';
 import { FullScreenLoader } from '../ui/Loader';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { assetService, boardService } from '../../services';
+import { assetService, boardService, collabService } from '../../services';
 import { useHistory } from '../../hooks/useHistory';
+import { useBoardCollab } from '../../hooks/useBoardCollab';
 import WhiteboardCanvas from './WhiteboardCanvas';
-import Toolbar from './Toolbar';
+import Toolbar, { TOOL_ITEMS } from './Toolbar';
+import IconButton from '../ui/IconButton';
+import SharePanel from '../collab/SharePanel';
+import PermissionNotice from '../collab/PermissionNotice';
+import WaitingRoom from '../collab/WaitingRoom';
 import PropertiesPanel from './PropertiesPanel';
 import EditorTopBar from './EditorTopBar';
 import ZoomControls from './ZoomControls';
@@ -44,7 +49,18 @@ const isTypingTarget = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXT
 export default function BoardEditor({ boardId, onExit }) {
   const { user } = useAuth();
   const toast = useToast();
-  const { present: elements, commit, undo, redo, reset, canUndo, canRedo } = useHistory([]);
+  const { present: elements, commit: rawCommit, undo, redo, reset, canUndo, canRedo, applyExternal } = useHistory([]);
+
+  // Pizarra compartida: todo cambio pasa por aquí y solo se aplica con permiso de escritura.
+  // En pizarras propias el permiso es siempre true, así que se comporta exactamente igual que antes.
+  const collabRef = useRef({ canWrite: true, canUpload: true });
+  const commit = useCallback(
+    (updater, options) => {
+      if (!collabRef.current.canWrite) return;
+      rawCommit(updater, options);
+    },
+    [rawCommit]
+  );
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -73,6 +89,35 @@ export default function BoardEditor({ boardId, onExit }) {
   const latest = useRef({});
   latest.current = { elements, name, background, viewport, textEdit };
 
+  /* ------------------------------------------------- pizarra compartida */
+
+  // 'owner' = pizarra propia · 'guest' = estudiante aprobado · 'pending'|'rejected'|'removed' = sala de espera
+  const [access, setAccess] = useState({ role: 'owner', ownerId: user.id, member: null });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [shareOpen, setShareOpen] = useState(false);
+  const backgroundChangeRef = useRef(null);
+
+  const collab = useBoardCollab({
+    boardId,
+    user,
+    access,
+    ready: !loading,
+    elements,
+    applyExternal,
+    name,
+    background,
+    toast,
+    onRemoteMeta: (meta) => {
+      if (typeof meta?.name === 'string') setName(meta.name);
+      if (meta?.background && BACKGROUNDS[meta.background]) backgroundChangeRef.current?.(meta.background);
+    },
+    onKicked: (status) => {
+      toast(status === 'removed' ? 'El profesor te ha retirado de la pizarra' : 'Ya no tienes acceso a esta pizarra', 'warning');
+      setAccess({ role: status, ownerId: null, member: null });
+    },
+  });
+  collabRef.current = { ...collab, canUpload: collab.canUpload && collab.canWrite };
+
   /* ---------------------------------------------------------- carga */
 
   useEffect(() => {
@@ -82,15 +127,35 @@ export default function BoardEditor({ boardId, onExit }) {
     (async () => {
       try {
         // Mínimo breve para que la animación de apertura se aprecie y no parpadee.
-        const [board] = await Promise.all([
+        const [ownBoard] = await Promise.all([
           boardService.getBoard(user.id, boardId),
           new Promise((r) => setTimeout(r, 650)),
         ]);
         if (!alive) return;
+        let board = ownBoard;
+        let nextAccess = { role: 'owner', ownerId: user.id, member: null };
+        // No es propia: ¿es una pizarra compartida a la que el estudiante tiene acceso?
+        if (!board && collabService) {
+          const member = await collabService.getMembership(boardId, user.id).catch(() => null);
+          if (!alive) return;
+          if (member?.status === 'approved') {
+            board = await collabService.getSharedBoard(boardId);
+            if (!alive) return;
+            if (board) {
+              nextAccess = { role: 'guest', ownerId: board.ownerId, member };
+              collabService.setImageOwner(board.ownerId);
+            }
+          } else if (member) {
+            setAccess({ role: member.status, ownerId: null, member });
+            setLoading(false);
+            return;
+          }
+        }
         if (!board) {
           setNotFound(true);
           return;
         }
+        setAccess(nextAccess);
         const els = board.elements || [];
         reset(els);
         setName(board.name);
@@ -116,8 +181,9 @@ export default function BoardEditor({ boardId, onExit }) {
     })();
     return () => {
       alive = false;
+      collabService?.setImageOwner(null);
     };
-  }, [boardId, user.id, reset, toast]);
+  }, [boardId, user.id, reset, toast, reloadKey]);
 
   /* ------------------------------------------------------- guardado */
 
@@ -125,15 +191,26 @@ export default function BoardEditor({ boardId, onExit }) {
     (manual = false) => {
       if (!readyRef.current) return Promise.resolve();
       clearTimeout(saveTimer.current);
+      const co = collabRef.current;
+      // Estudiante: no guarda la pizarra (no es suya); solo envía sus cambios por elemento.
+      if (co.isGuest) {
+        setSaveStatus('saving');
+        return co.flush().then(() => {
+          setSaveStatus('saved');
+          if (manual) toast('Cambios sincronizados');
+        });
+      }
       const snap = latest.current;
       setSaveStatus('saving');
       const thumbnail = createThumbnail(snap.elements, snap.background, getImage);
       const run = saveChain.current
+        // Pizarra compartida: los elementos se guardan por elemento (sin pisar lo de los estudiantes).
+        .then(() => (co.persistsElements ? co.flush() : null))
         .then(() =>
           boardService.saveBoard(user.id, boardId, {
             name: snap.name.trim() || 'Pizarra sin título',
             background: snap.background,
-            elements: snap.elements,
+            elements: co.persistsElements ? undefined : snap.elements,
             viewport: snap.viewport,
             thumbnail,
           })
@@ -241,6 +318,7 @@ export default function BoardEditor({ boardId, onExit }) {
 
   const changeTool = useCallback(
     (t) => {
+      if (!collabRef.current.canWrite && t !== 'hand') return; // dibujo bloqueado por el profesor
       if (latest.current.textEdit) finishTextEdit();
       setTool(t);
       if (t !== 'select') setSelectedIds([]);
@@ -317,6 +395,10 @@ export default function BoardEditor({ boardId, onExit }) {
 
   const addImages = useCallback(
     async (files, point) => {
+      if (!collabRef.current.canUpload) {
+        toast('El profesor ha bloqueado la subida de imágenes', 'warning');
+        return;
+      }
       const valid = files.filter((f) => ACCEPTED_IMAGE_TYPES.includes(f.type));
       if (!valid.length) {
         toast('Formato no soportado. Usa PNG, JPG o WEBP.', 'error');
@@ -332,7 +414,8 @@ export default function BoardEditor({ boardId, onExit }) {
       for (let i = 0; i < valid.length; i++) {
         try {
           const { blob, width, height, img } = await prepareImage(valid[i]);
-          const imageId = await assetService.saveImage(user.id, blob, { width, height, name: valid[i].name });
+          // En pizarras compartidas las imágenes van a la carpeta del profesor (storageOwnerId); si no, a la propia.
+          const imageId = await assetService.saveImage(collabRef.current.storageOwnerId || user.id, blob, { width, height, name: valid[i].name });
           primeImage(imageId, img);
           const s = Math.min(1, maxW / width, maxH / height);
           const ew = width * s;
@@ -363,7 +446,13 @@ export default function BoardEditor({ boardId, onExit }) {
     [commit, toast, user.id]
   );
 
-  const pickImage = useCallback(() => fileInputRef.current?.click(), []);
+  const pickImage = useCallback(() => {
+    if (!collabRef.current.canUpload) {
+      toast('El profesor ha bloqueado la subida de imágenes', 'warning');
+      return;
+    }
+    fileInputRef.current?.click();
+  }, [toast]);
 
   const onFileInput = (e) => {
     const files = [...(e.target.files || [])];
@@ -382,6 +471,7 @@ export default function BoardEditor({ boardId, onExit }) {
       return s;
     });
   }, []);
+  backgroundChangeRef.current = handleBackgroundChange;
 
   const clearBoard = useCallback(() => {
     commit([]);
@@ -421,14 +511,48 @@ export default function BoardEditor({ boardId, onExit }) {
   }, [finishTextEdit, onExit]);
 
   const handleUndo = useCallback(() => {
+    if (!collabRef.current.canWrite) return;
     if (latest.current.textEdit) setTextEdit(null);
     undo();
   }, [undo]);
 
   const handleRedo = useCallback(() => {
+    if (!collabRef.current.canWrite) return;
     if (latest.current.textEdit) setTextEdit(null);
     redo();
   }, [redo]);
+
+  /* ------------------------------------------------- permisos en vivo */
+
+  // Si el profesor bloquea el dibujo: solo queda la mano (desplazarse) y se cancela lo que estuviera en curso.
+  useEffect(() => {
+    if (collab.canWrite) return;
+    if (tool !== 'hand') setTool('hand');
+    setSelectedIds((ids) => (ids.length ? [] : ids));
+    if (latest.current.textEdit) {
+      latest.current.textEdit = null;
+      setTextEdit(null);
+    }
+  }, [collab.canWrite, tool]);
+
+  const lockedTools = useMemo(() => {
+    if (!collab.isGuest) return undefined;
+    if (!collab.canWrite) return new Set(TOOL_ITEMS.filter((it) => it !== 'sep' && it.id !== 'hand').map((it) => it.id));
+    if (!collab.canUpload) return new Set(['image']);
+    return undefined;
+  }, [collab.isGuest, collab.canWrite, collab.canUpload]);
+
+  const { enableCode } = collab;
+  const enableSharing = useCallback(async () => {
+    await saveNowRef.current(); // guarda la pizarra completa antes de pasar al guardado por elemento
+    await enableCode(false);
+  }, [enableCode]);
+  const closeShare = useCallback(() => setShareOpen(false), []);
+
+  const handleWaitingStatus = useCallback((status) => {
+    if (status === 'approved') setReloadKey((k) => k + 1);
+    else setAccess((a) => ({ ...a, role: status }));
+  }, []);
 
   /* ------------------------------------------------- teclado */
 
@@ -608,6 +732,43 @@ export default function BoardEditor({ boardId, onExit }) {
   const elementCount = useMemo(() => elements.filter((e) => e.type !== 'erase').length, [elements]);
   const isDark = BACKGROUNDS[background]?.dark;
 
+  if (['pending', 'rejected', 'removed'].includes(access.role)) {
+    return <WaitingRoom boardId={boardId} userId={user.id} status={access.role} onStatusChange={handleWaitingStatus} onExit={onExit} />;
+  }
+
+  // Botón de la barra superior: el profesor abre el panel de compartir; el estudiante ve el estado en vivo.
+  let collabSlot = null;
+  if (collab.available && collab.isOwner) {
+    const n = collab.pending.length;
+    collabSlot = (
+      <span className="relative">
+        <IconButton
+          icon={Users}
+          label={n ? `Compartir · ${n} ${n === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}` : 'Compartir con estudiantes'}
+          onClick={() => setShareOpen((o) => !o)}
+          active={shareOpen}
+          aria-expanded={shareOpen}
+        />
+        {n > 0 && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white"
+          >
+            {n}
+          </span>
+        )}
+      </span>
+    );
+  } else if (collab.available && collab.isGuest) {
+    collabSlot = (
+      <span className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold text-slate-600" title="Pizarra compartida por tu profesor">
+        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${collab.connected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+        <Users size={15} aria-hidden="true" />
+        <span className="hidden sm:inline">{collab.connected ? 'En vivo' : 'Conectando…'}</span>
+      </span>
+    );
+  }
+
   if (notFound) {
     return (
       <div className="grid h-full place-items-center bg-slate-50 p-6">
@@ -683,8 +844,8 @@ export default function BoardEditor({ boardId, onExit }) {
         onBack={handleBack}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        canUndo={canUndo && collab.canWrite}
+        canRedo={canRedo && collab.canWrite}
         background={background}
         onBackgroundChange={handleBackgroundChange}
         onClear={() => setConfirmClear(true)}
@@ -692,7 +853,14 @@ export default function BoardEditor({ boardId, onExit }) {
         exporting={exporting}
         onSave={() => saveNow(true)}
         beforeLogout={() => saveNowRef.current()}
+        guest={collab.isGuest}
+        collabSlot={collabSlot}
       />
+
+      {collab.available && collab.isOwner && (
+        <SharePanel open={shareOpen} onClose={closeShare} collab={collab} onEnable={enableSharing} />
+      )}
+      {collab.isGuest && <PermissionNotice canWrite={collab.canWrite} canUpload={collab.canUpload} />}
 
       <PropertiesPanel
         tool={tool}
@@ -710,7 +878,7 @@ export default function BoardEditor({ boardId, onExit }) {
         onAltChange={(id, alt) => updateElement(id, { alt }, `alt:${id}`)}
       />
 
-      <Toolbar tool={tool} onToolChange={changeTool} onPickImage={pickImage} />
+      <Toolbar tool={tool} onToolChange={changeTool} onPickImage={pickImage} lockedTools={lockedTools} />
 
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
